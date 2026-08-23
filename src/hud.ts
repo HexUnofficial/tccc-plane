@@ -123,7 +123,6 @@ ecs.registerBehavior((world) => {
 
   const arrow = el('arrow')
   const arrowGlyph = arrow?.querySelector('svg') as SVGElement | null
-  const arrowLabel = el('arrow-label')
 
   const dt = world.time.delta / 1000
   if (dt > 0) smoothedFps += (1 / dt - smoothedFps) * 0.1
@@ -252,7 +251,7 @@ ecs.registerBehavior((world) => {
     const MARGIN = 1.35
     const onScreen = inFront > 0 && (straddles || overlaps(arrowShown ? MARGIN : 1))
 
-    if (arrow && arrowGlyph && arrowLabel) {
+    if (arrow && arrowGlyph) {
       /*
        * And a dwell, for the case the margin cannot cover: something moving
        * fast enough crosses the whole gap between frames. A quarter second is
@@ -305,8 +304,6 @@ ecs.registerBehavior((world) => {
           arrowGlyph.style.transition = ''
           arrowSnap = false
         }
-
-        arrowLabel.textContent = formatDistance(range)
       } else {
         arrowSnap = true
       }
