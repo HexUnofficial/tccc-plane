@@ -102,8 +102,16 @@ export const GpsAnchor = ecs.registerComponent({
     const forward = w.transform.getWorldQuaternion(cameraEid).timesVec(vec3.xyz(0, 0, -1))
     const cameraYaw = Math.atan2(forward.x, -forward.z)
 
-    // Rotating local ENU by this lands it on the SLAM frame; see the header.
-    const targetYaw = cameraYaw - (heading * Math.PI) / 180
+    /*
+     * Rotating local ENU by this lands it on the SLAM frame.
+     *
+     * quat.yRadians(θ) turns a direction at compass-style angle a into one at
+     * a − θ (verified against the runtime; it is a right-handed rotation about
+     * +Y, where compass bearings run the other way). Content at true bearing β
+     * therefore lands at β − θ in the SLAM frame, and we want that to be the
+     * camera's SLAM yaw ψ when the compass reads β — so θ = β − ψ.
+     */
+    const targetYaw = (heading * Math.PI) / 180 - cameraYaw
 
     if (!data.hasYaw) {
       data.yawOffset = targetYaw

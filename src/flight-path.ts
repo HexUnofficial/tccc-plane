@@ -1,6 +1,6 @@
 import * as ecs from '@8thwall/ecs'
 
-const { vec3, quat } = ecs.math
+const { vec3, quat, mat4 } = ecs.math
 
 const TAU = Math.PI * 2
 const GRAVITY = 9.81
@@ -120,9 +120,28 @@ export function createFlightPath({
         ? bank + (target - bank) * (1 - Math.exp(-dt / rollTime))
         : target
 
-      // Orient so the entity's forward axis points down the velocity vector,
-      // then roll about that same (now-local) axis.
-      const orientation = quat.lookAt(vec3.zero(), forward, WORLD_UP)
+      /*
+       * Build the orientation basis by hand rather than with quat.lookAt.
+       *
+       * ECS's lookAt aligns local +Z with the target direction, where three.js
+       * aligns local −Z, and the two libraries also differ in how the roll
+       * then composes. Reproducing tccc-ar-test's basis exactly — columns
+       * [right, up, −forward], via a row-major matrix decomposed to a
+       * quaternion — keeps the bank direction provably identical to the
+       * original instead of resting on a sign I'd have to re-derive. It also
+       * means the model keeps the same noseOffset of 180° it already had.
+       */
+      const zAxis = forward.scale(-1)
+      const basisRight = WORLD_UP.cross(zAxis).normalize()
+      const up = zAxis.cross(basisRight)
+      const orientation = mat4.i().makeRows([
+        [basisRight.x, up.x, zAxis.x, 0],
+        [basisRight.y, up.y, zAxis.y, 0],
+        [basisRight.z, up.z, zAxis.z, 0],
+        [0, 0, 0, 1],
+      ]).decomposeR()
+
+      // Then roll about the nose axis, which is local Z after that basis.
       const roll = quat.axisAngle(vec3.xyz(0, 0, bank))
       entity.set(ecs.Quaternion, orientation.times(roll))
     },
