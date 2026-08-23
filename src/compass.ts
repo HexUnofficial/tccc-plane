@@ -37,41 +37,49 @@ function onOrientation(event: CompassEvent) {
   }
 }
 
+function listen() {
+  if (started) return
+  started = true
+  window.addEventListener('deviceorientationabsolute', onOrientation as EventListener)
+  window.addEventListener('deviceorientation', onOrientation as EventListener)
+}
+
 /**
  * iOS 13+ refuses orientation events until an explicit grant, and the request
- * must happen inside a user gesture — hence the first-touch trigger rather
- * than calling this on load.
+ * must happen inside a user gesture — so this is called from the gate's Start
+ * button (see gate.ts), not on load.
+ *
+ * @returns whether readings can be expected. Android and desktop have no
+ *   prompt and resolve true without asking.
  */
-async function requestPermission(): Promise<void> {
+export async function requestCompassPermission(): Promise<boolean> {
   const api = window.DeviceOrientationEvent as unknown as {
     requestPermission?: () => Promise<PermissionState>
   }
   if (typeof api?.requestPermission === 'function') {
     try {
-      if ((await api.requestPermission()) !== 'granted') return
+      if ((await api.requestPermission()) !== 'granted') return false
     } catch {
-      return
+      return false
     }
   }
-  window.addEventListener('deviceorientationabsolute', onOrientation as EventListener)
-  window.addEventListener('deviceorientation', onOrientation as EventListener)
+  listen()
+  return true
 }
 
+/**
+ * Start listening where no grant is needed. iOS will deliver nothing until
+ * `requestCompassPermission` has been through the Start button.
+ */
 export function startCompass() {
-  if (started) return
+  const api = window.DeviceOrientationEvent as unknown as { requestPermission?: unknown }
+  if (typeof api?.requestPermission !== 'function') listen()
+}
+
+/** Stand in for the magnetometer. See `simulateFix` in gps.ts for why. */
+export function simulateHeading(degrees: number) {
+  heading = ((degrees % 360) + 360) % 360
   started = true
-
-  const gesture = () => {
-    window.removeEventListener('touchend', gesture)
-    window.removeEventListener('click', gesture)
-    void requestPermission()
-  }
-  window.addEventListener('touchend', gesture)
-  window.addEventListener('click', gesture)
-
-  // Android needs no grant, so start listening immediately as well; the
-  // gesture path above is what unlocks iOS.
-  void requestPermission()
 }
 
 /** Degrees clockwise from true north, or null before the first reading. */

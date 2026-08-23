@@ -1,6 +1,7 @@
 import * as ecs from '@8thwall/ecs'
-import { startCompass, getHeading } from './compass'
-import { startGps, getFix, toLocalMetres } from './gps'
+import { startCompass, getHeading, simulateHeading } from './compass'
+import { startGps, getFix, simulateFix, toLocalMetres } from './gps'
+import { bearingBetween, destination } from './geo'
 import { INSTALLATION } from './location'
 
 const { vec3, quat } = ecs.math
@@ -74,11 +75,27 @@ export const GpsAnchor = ecs.registerComponent({
     hasPosition: 'boolean',
   },
   add: (_w, { schema }) => {
-    startCompass()
+    const simulate = params.get('sim') === '1'
     startGps({
       minAccuracy: num('minacc', schema.minAccuracy),
       averageFixes: num('avg', schema.averageFixes),
+      simulate,
     })
+
+    if (!simulate) {
+      startCompass()
+      return
+    }
+
+    /*
+     * Stand off the anchor on `viewfrom`, the way a real spectator would —
+     * standing due south of a run that happens to lie north-south means
+     * watching it fly straight at you, which shows the least of it.
+     */
+    const anchor = { lat: schema.latitude, lon: schema.longitude }
+    const viewer = destination(anchor, num('viewfrom', 180), num('viewdist', 400))
+    simulateFix({ ...viewer, accuracy: 5 })
+    simulateHeading(bearingBetween(viewer, anchor))
   },
   tick: (w, { eid, schema, data }) => {
     const entity = w.getEntity(eid)
@@ -126,10 +143,16 @@ export const GpsAnchor = ecs.registerComponent({
     }
 
     const yaw = data.yawOffset
-    const { east, north } = toLocalMetres(fix, {
-      lat: num('lat', schema.latitude),
-      lon: num('lon', schema.longitude),
-    })
+
+    /*
+     * 'relative' ignores the installation coordinates and drops the circuit a
+     * fixed distance from wherever you happen to be standing, so the whole
+     * thing is testable in any car park. 'fixed' is what you deploy.
+     */
+    const target = params.get('mode') === 'relative'
+      ? destination(fix, num('bearing', 0), num('distance', 400))
+      : { lat: num('lat', schema.latitude), lon: num('lon', schema.longitude) }
+    const { east, north } = toLocalMetres(fix, target)
 
     // Local ENU offset (north = −Z, east = +X, matching flight-path.ts),
     // rotated into the SLAM frame and hung off the camera's tracked position.

@@ -1,28 +1,256 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#F40000">
+  <!-- Launched from the home screen, both of these drop the browser chrome.
+       There is no Fullscreen API on iPhone Safari, so Add to Home Screen is
+       the whole of the iOS frameless story. -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="./assets/manifest.webmanifest">
+  <link rel="apple-touch-icon" href="./assets/icons/icon-180.png">
+  <link rel="icon" href="./assets/icons/icon-192.png">
 
-  <title>TCCC GPS Flight AR</title>
-  <meta itemprop="name" content="TCCC GPS Flight AR">
-  <meta name="twitter:title" content="TCCC GPS Flight AR">
-  <meta property="og:title" content="TCCC GPS Flight AR">
-  <meta property="og:site_name" content="TCCC GPS Flight AR">
-  <meta name="description" content="GPS-anchored AR: a banner-towing aircraft flies a fixed circuit over a real-world coordinate.">
-  <meta itemprop="description" content="GPS-anchored AR: a banner-towing aircraft flies a fixed circuit over a real-world coordinate.">
-  <meta property="og:description" content="GPS-anchored AR: a banner-towing aircraft flies a fixed circuit over a real-world coordinate.">
-  <meta name="twitter:description" content="GPS-anchored AR: a banner-towing aircraft flies a fixed circuit over a real-world coordinate.">
+  <title>TCCC — Are You Ready?</title>
+  <meta itemprop="name" content="TCCC — Are You Ready?">
+  <meta name="twitter:title" content="TCCC — Are You Ready?">
+  <meta property="og:title" content="TCCC — Are You Ready?">
+  <meta property="og:site_name" content="TCCC — Are You Ready?">
+  <meta name="description" content="GPS-anchored augmented reality for the mobile web.">
+  <meta itemprop="description" content="GPS-anchored augmented reality for the mobile web.">
+  <meta property="og:description" content="GPS-anchored augmented reality for the mobile web.">
+  <meta name="twitter:description" content="GPS-anchored augmented reality for the mobile web.">
+  <meta property="og:image" content="./assets/icons/icon-512.png">
+
   <script crossorigin="anonymous" src="./external/runtime/runtime.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@8thwall/engine-binary@1/dist/xr.js" async crossorigin="anonymous" data-preload-chunks="slam"></script>
   <script src="https://cdn.jsdelivr.net/npm/@8thwall/landing-page@1/dist/landing-page.js" crossorigin="anonymous"></script>
-  <meta property="og:image" content="./assets/preview.jpg">
+
+  <style>
+    /*
+     * Self-hosted rather than linked from Google Fonts: the gate is the one
+     * screen you need before you've even proven there's a network worth
+     * trusting, out at a riverbank on mobile data.
+     */
+    @font-face {
+      font-family: "Playball";
+      font-style: normal;
+      font-weight: 400;
+      font-display: swap;
+      src: url("./assets/fonts/playball-latin.woff2") format("woff2");
+    }
+
+    :root {
+      --ok: #4ade80;
+      --warn: #fbbf24;
+      --error: #f87171;
+      color-scheme: dark;
+    }
+
+    * { box-sizing: border-box; }
+
+    /* #arrow and #panel set display, which would beat the hidden attribute. */
+    [hidden] { display: none !important; }
+
+    html, body {
+      margin: 0;
+      height: 100%;
+      overflow: hidden;
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+      color: #fff;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    /* The engine paints the camera feed behind everything; an opaque body
+       background would hide it and leave a black screen with a model on it. */
+    html { background: #000; }
+    body { background: transparent; }
+
+    #hud {
+      position: fixed;
+      inset: 0;
+      z-index: 10;
+      pointer-events: none;
+      padding: max(1rem, env(safe-area-inset-top)) 1rem max(1rem, env(safe-area-inset-bottom));
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    #status {
+      margin: 0;
+      padding: 0.5rem 0.9rem;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      line-height: 1.2;
+      text-align: center;
+      background: rgb(0 0 0 / 0.65);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgb(255 255 255 / 0.15);
+    }
+    #status[data-tone="ok"]    { border-color: var(--ok); }
+    #status[data-tone="warn"]  { border-color: var(--warn); }
+    #status[data-tone="error"] { border-color: var(--error); }
+
+    #arrow {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      translate: -50% -50%;
+      display: grid;
+      place-items: center;
+      gap: 0.35rem;
+      opacity: 0.85;
+    }
+    #arrow svg {
+      width: 3.5rem;
+      height: 3.5rem;
+      transition: rotate 120ms linear;
+      filter: drop-shadow(0 2px 6px rgb(0 0 0 / 0.8));
+    }
+    #arrow-label {
+      font-size: 0.8rem;
+      font-variant-numeric: tabular-nums;
+      text-shadow: 0 1px 4px rgb(0 0 0 / 0.9);
+    }
+
+    #panel-toggle {
+      position: absolute;
+      right: 1rem;
+      bottom: max(1rem, env(safe-area-inset-bottom));
+      width: 2.5rem;
+      height: 2.5rem;
+      border-radius: 50%;
+      border: 1px solid rgb(255 255 255 / 0.25);
+      background: rgb(0 0 0 / 0.6);
+      color: #fff;
+      font: italic 600 1rem/1 serif;
+      pointer-events: auto;
+      backdrop-filter: blur(8px);
+    }
+
+    #panel {
+      position: absolute;
+      left: 1rem;
+      bottom: max(1rem, env(safe-area-inset-bottom));
+      margin: 0;
+      padding: 0.7rem 0.9rem;
+      display: grid;
+      grid-template-columns: auto auto;
+      gap: 0.15rem 0.75rem;
+      font-size: 0.72rem;
+      border-radius: 0.6rem;
+      background: rgb(0 0 0 / 0.65);
+      border: 1px solid rgb(255 255 255 / 0.15);
+      backdrop-filter: blur(8px);
+    }
+    #panel dt { opacity: 0.6; }
+    #panel dd { margin: 0; font-variant-numeric: tabular-nums; text-align: right; }
+
+    #gate {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      display: grid;
+      place-items: center;
+      padding: 1.5rem;
+      overflow: hidden;
+      /* The brand red, flat — a named hex should be the colour you get. */
+      background: #F40000;
+    }
+
+    /* The plane's tow banner has the same two diagonal bands. */
+    #gate-ribbon { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+    .gate-card { position: relative; max-width: 22rem; text-align: center; }
+
+    .gate-logotype {
+      margin: 0;
+      /* Fallback for when the artwork is swapped back out for live text. */
+      font-family: "Playball", "Brush Script MT", cursive;
+      font-weight: 400;
+      font-size: 3.2rem;
+      line-height: 1.15;
+      letter-spacing: 0.01em;
+      text-shadow: 0 3px 10px rgb(0 0 0 / 0.25);
+    }
+    .gate-logotype img {
+      display: block;
+      width: 100%;
+      max-width: 19rem;
+      height: auto;
+      margin-inline: auto;
+      filter: drop-shadow(0 3px 10px rgb(0 0 0 / 0.35));
+    }
+
+    .gate-tagline { margin: 1rem 0 1.1rem; font-size: 0.85rem; font-style: italic; opacity: 0.9; }
+    .gate-card p { margin: 0 0 1.25rem; font-size: 0.9rem; line-height: 1.5; opacity: 0.85; }
+
+    #gate-start {
+      width: 100%;
+      padding: 0.9rem;
+      border: 0;
+      border-radius: 999px;
+      background: #fff;
+      color: #F40000;
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      box-shadow: 0 8px 20px rgb(0 0 0 / 0.25);
+    }
+    #gate-start:disabled { opacity: 0.5; box-shadow: none; }
+
+    #gate-message { margin: 1rem 0 0; font-size: 0.8rem; min-height: 1.2em; opacity: 0.9; }
+  </style>
 </head>
 
 <body>
-<script src="bundle.js"></script>
+  <div id="hud">
+    <p id="status" data-tone="neutral" hidden></p>
 
+    <div id="arrow" hidden>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 4 20l8-5 8 5Z" fill="currentColor"/></svg>
+      <span id="arrow-label"></span>
+    </div>
+
+    <button id="panel-toggle" type="button" aria-label="Toggle telemetry" hidden>i</button>
+
+    <dl id="panel" hidden>
+      <dt>Your fix</dt><dd id="f-fix">—</dd>
+      <dt>Accuracy</dt><dd id="f-accuracy">—</dd>
+      <dt>Heading</dt><dd id="f-heading">—</dd>
+      <dt>Anchor</dt><dd id="f-anchor">—</dd>
+      <dt>Distance</dt><dd id="f-distance">—</dd>
+      <dt>Subject</dt><dd id="f-subject">—</dd>
+      <dt>Bearing</dt><dd id="f-bearing">—</dd>
+      <dt>FPS</dt><dd id="f-fps">—</dd>
+    </dl>
+  </div>
+
+  <div id="gate">
+    <!-- The banner's diagonal sweep and dark contour band, echoed in chrome. -->
+    <svg id="gate-ribbon" viewBox="0 0 400 400" preserveAspectRatio="none" aria-hidden="true">
+      <path d="M-20 130 L420 20 L420 90 L-20 200 Z" fill="rgba(255,255,255,0.14)"/>
+      <path d="M-20 260 L420 160 L420 210 L-20 310 Z" fill="rgba(0,0,0,0.18)"/>
+    </svg>
+    <div class="gate-card">
+      <h1 class="gate-logotype">
+        <!-- Supplied as outlines, so the alt text has to carry the words. -->
+        <img src="./assets/brand/title.svg" alt="next stop, SHANGHAI!" width="1405" height="538">
+      </h1>
+      <p class="gate-tagline">Best now, better forever.</p>
+      <p>Point your phone at the world around you. We need your camera, location and motion sensors.</p>
+      <button id="gate-start" type="button" disabled>Start AR</button>
+      <p id="gate-message">Starting…</p>
+    </div>
+  </div>
+
+  <script src="bundle.js"></script>
 </body>
 
 </html>

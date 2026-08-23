@@ -1,21 +1,13 @@
 import * as ecs from '@8thwall/ecs'
+import { createCircuit, CircuitOptions } from './circuit'
 
 const { vec3, quat, mat4 } = ecs.math
 
-const TAU = Math.PI * 2
 const GRAVITY = 9.81
 const WORLD_UP = vec3.up()
 
-type FlightPathOptions = {
-  shape: string
-  altitude: number
+type FlightPathOptions = CircuitOptions & {
   maxBank: number // radians
-  speed: number
-  heading: number // compass degrees
-  length: number // racetrack
-  turnRadius: number // racetrack
-  radius: number // eight, circle
-  period: number // eight, circle
   rollTime: number
 }
 
@@ -25,10 +17,10 @@ type FlightPathOptions = {
  * immutable vec3/quat math (the engine has no `three` package of its own to
  * import against, so this uses the vocabulary it exposes instead).
  *
- * The default shape is a racetrack: a long straight leg, a 180 at the end,
- * and a straight leg back. Aligned to a compass heading it reads as an
- * aircraft beating up and down a river, which a circle or figure-eight does
- * not — those visibly double back through the middle.
+ * The *shape* of the circuit lives in circuit.ts, which has no engine import
+ * in it, so the map picker in setup/ can sample the same arithmetic without a
+ * runtime to give it `window.ecs`. What is left here is everything that needs
+ * the engine: orientation, bank, and placing an entity.
  *
  * Paths are parametrised by distance travelled rather than by angle, so speed
  * is constant everywhere and is set in m/s rather than falling out of the
@@ -40,45 +32,15 @@ export function createFlightPath({
   radius, period,
   rollTime,
 }: FlightPathOptions) {
-  // Rotate the whole circuit onto its compass heading. North = -Z, east = +X
-  // (matching tccc-ar-test's LocAR world), and the path is authored running
-  // along +X, so a bearing of θ needs a yaw of 90° - θ.
-  const headingYaw = quat.yRadians(((90 - heading) * Math.PI) / 180)
+  const circuit = createCircuit({
+    shape, altitude, speed, heading, length, turnRadius, radius, period,
+  })
 
-  const straight = Math.max(length, 0)
-  const turnArc = Math.PI * turnRadius
-  const perimeter = 2 * straight + 2 * turnArc
-
-  /** Racetrack, parametrised by distance travelled around it. */
-  function racetrackAt(distance: number) {
-    const half = straight / 2
-    let d = ((distance % perimeter) + perimeter) % perimeter
-
-    if (d < straight) return vec3.xyz(-half + d, altitude, turnRadius) // outbound leg
-    d -= straight
-    if (d < turnArc) {
-      const a = d / turnRadius // 0..PI around the far end
-      return vec3.xyz(half + turnRadius * Math.sin(a), altitude, turnRadius * Math.cos(a))
-    }
-    d -= turnArc
-    if (d < straight) return vec3.xyz(half - d, altitude, -turnRadius) // return leg
-    d -= straight
-    const a = d / turnRadius // 0..PI around the near end
-    return vec3.xyz(-half - turnRadius * Math.sin(a), altitude, -turnRadius * Math.cos(a))
-  }
+  const { perimeter, lapTime } = circuit
 
   function positionAt(t: number) {
-    let p
-    if (shape === 'racetrack') {
-      p = racetrackAt(speed * t)
-    } else {
-      const angle = (TAU * t) / period
-      p = shape === 'circle'
-        ? vec3.xyz(radius * Math.cos(angle), altitude, radius * Math.sin(angle))
-        // Lemniscate of Gerono — a self-crossing loop, kept for comparison.
-        : vec3.xyz(radius * Math.cos(angle), altitude, radius * Math.sin(angle) * Math.cos(angle))
-    }
-    return headingYaw.timesVec(p)
+    const p = circuit.positionAt(t)
+    return vec3.xyz(p.x, p.y, p.z)
   }
 
   // A racetrack's curvature jumps the instant the straight meets the turn.
@@ -90,7 +52,7 @@ export function createFlightPath({
   return {
     positionAt,
     perimeter,
-    lapTime: shape === 'racetrack' ? perimeter / speed : period,
+    lapTime,
 
     /** Place and orient `entity` for time `t` (seconds since the flight began). */
     apply(entity: ecs.Entity, t: number) {

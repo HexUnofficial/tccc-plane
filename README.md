@@ -72,7 +72,11 @@ maximum +Z, the banner at −Z, so the nose points +Z).
 | [src/compass.ts](src/compass.ts) | True-north heading, including the iOS permission gesture |
 | [src/flight-path.ts](src/flight-path.ts) | The racetrack circuit — ported from `tccc-ar-test/src/flight.js` |
 | [src/flight-motion.ts](src/flight-motion.ts) | Component driving an entity along that circuit each tick |
-| [src/flight-hud.ts](src/flight-hud.ts) | Range readout |
+| [src/hud.ts](src/hud.ts) | The overlay: direction arrow, status banner, telemetry panel |
+| [src/gate.ts](src/gate.ts) | The branded splash, and the tap that grants motion access |
+| [src/banner-fix.ts](src/banner-fix.ts) | Backface culling, so the banner lettering is legible |
+| [src/model.ts](src/model.ts), [src/model-scale.ts](src/model-scale.ts) | The GLB's measured bounds, and the `?size=` override |
+| [setup/](setup/) | The map picker — a separate page, `dist/setup.html` |
 | [src/location.ts](src/location.ts) | **Where the installation is, and how it flies** |
 | [src/geo.ts](src/geo.ts) | Great-circle helpers, ported verbatim |
 
@@ -120,6 +124,25 @@ field without republishing — same idea as the original.
 | `avg` | Fixes averaged together to suppress wander |
 | `smooth` | Seconds to ease to a corrected GPS position |
 | `smoothrot` | Seconds for the heading estimate to settle |
+| `size` | Overall assembly length in metres (aircraft, tow line and banner) |
+| `mode` | `relative` drops the circuit near you instead of at the site |
+| `bearing`, `distance` | Relative mode: which way, and how far |
+| `ui` | `none` (default, arrow only), `minimal` (adds warnings), `debug` (telemetry) |
+| `farwarn` | Metres from the anchor beyond which the HUD says you are not on site |
+| `sim` | `1` fakes GPS and compass, for Studio's simulator |
+| `viewfrom`, `viewdist` | Where the simulated viewer stands |
+
+## The two pages
+
+`dist/index.html` is the experience. `dist/setup.html` is the map picker: drag
+two pins to the ends of the run, and it draws the **actual** circuit the
+aircraft will fly — sampled from [setup/../src/circuit.ts](src/circuit.ts), the
+same arithmetic the aircraft flies, not an approximation — with sliders for
+length, turn radius, altitude, speed and size, a generated URL, a QR code and a
+snippet to paste into `location.ts`.
+
+It is an authoring tool that can move the installation, so build with
+`EXCLUDE_SETUP=1 npm run build` to leave it out of a public deploy.
 
 ## Running it
 
@@ -143,6 +166,13 @@ Verified against the running runtime:
 - The circuit geometry: constant **60.0 m/s** all the way round, outbound leg on
   bearing **114.5°** and the return on **294.5°**, altitude held at 50 m
   (vertical motion is left to the GLB's own clip), 88.3 s per 5296 m lap.
+- The gate renders with the brand red and the real wordmark, and all five
+  components register.
+- The map picker renders its map, pins and circuit, and its own readout agrees
+  with the figures above (5296 m, 88 s) — so it really is sampling the flight
+  code rather than a second implementation.
+- The shipped GLB is the **V5** export: V4 and V5 are geometrically identical,
+  but only V5 carries the `FlightDetails_Loop` clip the scene now names.
 
 **Not verified — needs a phone, outdoors:**
 
@@ -154,7 +184,10 @@ Verified against the running runtime:
 - Whether SLAM drift over a long session degrades the anchor. The original had
   no tracker to drift; this one leans on SLAM between fixes.
 - Anything about how it actually looks: the aircraft at a few hundred metres,
-  banner legibility, sunlight, thermal throttling.
+  banner legibility, sunlight, thermal throttling. Nothing here has run a
+  single frame of the render loop — this environment cannot composite, so the
+  flight, the arrow and the banner fix are all verified by construction and by
+  their maths, not by having been seen.
 
 ## Deploying
 

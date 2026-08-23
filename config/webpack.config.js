@@ -8,6 +8,23 @@ const createDev8Plugin = require('./dev8-plugin')
 const rootPath = process.cwd()
 const distPath = path.join(rootPath, 'dist')
 const srcPath = path.join(rootPath, 'src')
+const setupPath = path.join(rootPath, 'setup')
+
+/*
+ * setup.html is an authoring tool rather than part of the experience, but it is
+ * deployed alongside it: served from the real origin, its QR codes encode a
+ * public HTTPS URL, which is far easier to open on a phone than a LAN address
+ * behind a self-signed certificate. Set EXCLUDE_SETUP=1 to leave it out.
+ *
+ * Its sources live in setup/ rather than src/ on purpose. entry-plugin.js
+ * writes a virtual entry that imports *every* .ts and .js under src/ (skipping
+ * only `assets` and `.dependencies`), so anything put there would be pulled
+ * into the AR bundle — which would mean the AR page downloading Leaflet, and
+ * the picker's DOM bootstrap running against a page that has none of its
+ * elements. Outside src/ the plugin never sees it, and the two entries stay
+ * genuinely separate.
+ */
+const includeSetup = process.env.EXCLUDE_SETUP !== '1'
 
 const makeTsLoader = () => ({
   test: /\.ts$/,
@@ -21,10 +38,42 @@ const makeAssetLoader = () => ({
   loader: path.join(__dirname, 'asset-loader.js'),
 })
 
+/*
+ * Only the setup page has stylesheets — Leaflet's own, which the map is
+ * unusable without, plus the picker's. style-loader injects them from the
+ * setup chunk at runtime, so there is no extra file for setup.html to link
+ * and no risk of the AR page picking any of it up.
+ */
+const makeCssLoader = () => ({
+  test: /\.css$/,
+  // src/assets is the asset-loader's territory; every rule that matches a file
+  // runs against it, so keep the two from overlapping.
+  exclude: [path.join(srcPath, 'assets')],
+  use: ['style-loader', 'css-loader'],
+})
+
+/*
+ * Leaflet's CSS references images/layers.png and the default marker icons by
+ * url(). Nothing here uses the default markers (the pins are divIcons) and the
+ * layers control is off, but css-loader still has to resolve them. They are a
+ * few hundred bytes each, so inline them as data URIs rather than emitting
+ * five files whose paths would then depend on output.publicPath.
+ */
+const makeLeafletImageLoader = () => ({
+  test: /\.(png|gif|jpe?g|svg)$/i,
+  include: [path.join(rootPath, 'node_modules', 'leaflet')],
+  type: 'asset/inline',
+})
+
 const config = {
-  entry: './entry.js',
+  entry: {
+    // Key names decide the emitted filenames; `bundle` keeps the AR page's
+    // script at dist/bundle.js, which src/index.html hard-codes.
+    bundle: './entry.js',
+    ...(includeSetup ? { setup: path.join(setupPath, 'main.ts') } : {}),
+  },
   output: {
-    filename: 'bundle.js',
+    filename: '[name].js',
     path: distPath,
     publicPath: '/',
   },
@@ -34,7 +83,18 @@ const config = {
       filename: 'index.html',
       scriptLoading: 'blocking',
       inject: false,
+      chunks: ['bundle'],
     }),
+    ...(includeSetup ? [new HtmlWebpackPlugin({
+      template: path.join(setupPath, 'setup.html'),
+      filename: 'setup.html',
+      chunks: ['setup'],
+      inject: 'body',
+      scriptLoading: 'defer',
+      // Relative, so the page also works when the build is served from a
+      // subdirectory. output.publicPath is '/' for the AR runtime's sake.
+      publicPath: './',
+    })] : []),
     new CopyWebpackPlugin({
       patterns: [
         {
@@ -62,6 +122,8 @@ const config = {
     rules: [
       makeTsLoader(),
       makeAssetLoader(),
+      makeCssLoader(),
+      makeLeafletImageLoader(),
     ],
   },
   mode: 'production',

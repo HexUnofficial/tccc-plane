@@ -24,10 +24,28 @@ const recent: Fix[] = []
 let averageFixes = 3
 let minAccuracy = 100
 
-export function startGps(options: { minAccuracy?: number; averageFixes?: number } = {}) {
+/**
+ * Stand in for the sensor with a fixed fix.
+ *
+ * `?sim=1` exists because 8th Wall Studio's own simulator supplies a camera
+ * and a tracked pose but no GPS or magnetometer, so without this the
+ * experience sits forever on "Waiting for GPS". It fakes the two sensors the
+ * simulator does not, which is the desktop half of what tccc-ar-test's
+ * `?sim=1` did; the drag-to-look and WASD half is Studio's job here.
+ */
+export function simulateFix(fix: Fix) {
+  latest = fix
+  error = null
+}
+
+export function startGps(options: {
+  minAccuracy?: number; averageFixes?: number; simulate?: boolean
+} = {}) {
   if (watchId !== null) return
   minAccuracy = options.minAccuracy ?? minAccuracy
   averageFixes = Math.max(1, Math.round(options.averageFixes ?? averageFixes))
+
+  if (options.simulate) return
 
   if (!navigator.geolocation) {
     error = 'This browser has no Geolocation API.'

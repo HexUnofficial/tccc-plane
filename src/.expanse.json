@@ -183,34 +183,6 @@
       "name": "Text",
       "order": 1.9632252822400198
     },
-    "904308fe-98f5-4c93-bf62-f39d50c6e602": {
-      "id": "904308fe-98f5-4c93-bf62-f39d50c6e602",
-      "position": [
-        9.546973370717888,
-        17.058059801097308,
-        0
-      ],
-      "rotation": [
-        0,
-        0,
-        0,
-        1
-      ],
-      "scale": [
-        1,
-        1,
-        1
-      ],
-      "geometry": null,
-      "material": null,
-      "parentId": "84028e73-ee70-412d-b8d4-c09bf07c655c",
-      "components": {},
-      "name": "Main Screen",
-      "order": 14.958687422311806,
-      "ui": {
-        "type": "overlay"
-      }
-    },
     "93e31971-a37d-4f17-9b42-51f2be3861f6": {
       "id": "93e31971-a37d-4f17-9b42-51f2be3861f6",
       "position": [
@@ -338,7 +310,13 @@
       "geometry": null,
       "material": null,
       "parentId": "66cf2a2a-8023-4fa6-b6d4-63394e544d20",
-      "components": {},
+      "components": {
+        "098d925e-2efe-4aaf-ae92-bd6f2832fb1d": {
+          "id": "098d925e-2efe-4aaf-ae92-bd6f2832fb1d",
+          "name": "model-scale",
+          "parameters": {}
+        }
+      },
       "name": "Aircraft",
       "order": 24,
       "gltfModel": {
@@ -348,60 +326,6 @@
         },
         "animationClip": "FlightDetails_Loop",
         "loop": true
-      }
-    },
-    "839e9002-f71a-4992-9654-2e603d16f9f6": {
-      "id": "839e9002-f71a-4992-9654-2e603d16f9f6",
-      "position": [
-        0,
-        0,
-        0
-      ],
-      "rotation": [
-        0,
-        0,
-        0,
-        1
-      ],
-      "scale": [
-        1,
-        1,
-        1
-      ],
-      "geometry": null,
-      "material": null,
-      "parentId": "904308fe-98f5-4c93-bf62-f39d50c6e602",
-      "name": "HUD",
-      "order": 25,
-      "ui": {
-        "text": "Waiting for GPS and compass…",
-        "width": "100%",
-        "height": "40",
-        "type": "overlay",
-        "position": "absolute",
-        "top": "10",
-        "left": "10",
-        "textAlign": "left",
-        "verticalTextAlign": "start",
-        "fontSize": 16,
-        "color": "#ffffff",
-        "font": {
-          "type": "font",
-          "font": "Roboto"
-        },
-        "stackingOrder": 5
-      },
-      "components": {
-        "cf586ecc-8bfa-4aa0-ad24-dd370316be33": {
-          "id": "cf586ecc-8bfa-4aa0-ad24-dd370316be33",
-          "name": "flight-hud",
-          "parameters": {
-            "target": {
-              "type": "entity",
-              "id": "75a495d1-5849-4963-8966-8572e226fc7d"
-            }
-          }
-        }
       }
     }
   },
