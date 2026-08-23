@@ -346,7 +346,7 @@
           "type": "asset",
           "asset": "assets/tccc-airplane.glb"
         },
-        "animationClip": "Propeller|PropellerAction.001",
+        "animationClip": "FlightDetails_Loop",
         "loop": true
       }
     },
