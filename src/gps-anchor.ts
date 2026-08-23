@@ -1,16 +1,13 @@
 import * as ecs from '@8thwall/ecs'
 import { startCompass, getHeading, simulateHeading } from './compass'
-import { startGps, getFix, simulateFix, toLocalMetres } from './gps'
+import { startGps, getFix, getFixSeq, simulateFix, toLocalMetres } from './gps'
 import { bearingBetween, destination } from './geo'
-import { INSTALLATION } from './location'
+import { flag, num, placed, placedNum } from './config'
+import {
+  DEFAULT_MODE, INSTALLATION, RELATIVE_PLACEMENT, VIEW_FROM,
+} from './location'
 
 const { vec3, quat } = ecs.math
-
-const params = new URLSearchParams(location.search)
-const num = (key: string, fallback: number) => {
-  const value = Number.parseFloat(params.get(key) ?? '')
-  return Number.isFinite(value) ? value : fallback
-}
 
 /**
  * Holds this entity at a real-world latitude and longitude, so that
@@ -61,10 +58,10 @@ export const GpsAnchor = ecs.registerComponent({
   schemaDefaults: {
     latitude: INSTALLATION.lat,
     longitude: INSTALLATION.lon,
-    elevation: 0,
+    elevation: INSTALLATION.elevation,
     minAccuracy: 100,
     averageFixes: 3,
-    headingSmoothing: 4,
+    headingSmoothing: 8,
     positionSmoothing: 1,
   },
   data: {
@@ -73,9 +70,22 @@ export const GpsAnchor = ecs.registerComponent({
     posX: 'f64',
     posZ: 'f64',
     hasPosition: 'boolean',
+    /*
+     * The camera's SLAM position at the moment of the last accepted fix, and
+     * the ENU offset measured from that fix. Latched together so the anchor
+     * can be rebuilt from where you *were* when the fix arrived rather than
+     * from where you are now — see the note in tick().
+     */
+    fixSeq: 'f64',
+    fixCamX: 'f64',
+    fixCamZ: 'f64',
+    fixEast: 'f64',
+    fixNorth: 'f64',
+    prevCamYaw: 'f64',
+    hasPrevCamYaw: 'boolean',
   },
   add: (_w, { schema }) => {
-    const simulate = params.get('sim') === '1'
+    const simulate = flag('sim', false)
     startGps({
       minAccuracy: num('minacc', schema.minAccuracy),
       averageFixes: num('avg', schema.averageFixes),
@@ -93,7 +103,9 @@ export const GpsAnchor = ecs.registerComponent({
      * watching it fly straight at you, which shows the least of it.
      */
     const anchor = { lat: schema.latitude, lon: schema.longitude }
-    const viewer = destination(anchor, num('viewfrom', 180), num('viewdist', 400))
+    const viewer = destination(
+      anchor, num('viewfrom', VIEW_FROM), num('viewdist', RELATIVE_PLACEMENT.distance),
+    )
     simulateFix({ ...viewer, accuracy: 5 })
     simulateHeading(bearingBetween(viewer, anchor))
   },
@@ -130,10 +142,34 @@ export const GpsAnchor = ecs.registerComponent({
      */
     const targetYaw = (heading * Math.PI) / 180 - cameraYaw
 
+    /*
+     * Only re-estimate north while the device is reasonably still.
+     *
+     * targetYaw is the difference of two signals with different latencies: the
+     * SLAM yaw is immediate, the compass lags it. Swing the phone and that
+     * mismatch appears as a spurious change in the offset, which rotates the
+     * entire content frame — and because the anchor is hundreds of metres
+     * away, a couple of degrees of frame error throws the aircraft tens of
+     * metres across the sky. The symptom is content that wheels around
+     * whenever you turn.
+     *
+     * The offset is a constant, so nothing is lost by declining to measure it
+     * mid-turn and waiting for the phone to settle.
+     */
+    const yawRate = data.hasPrevCamYaw && dt > 0
+      ? Math.abs(Math.atan2(
+        Math.sin(cameraYaw - data.prevCamYaw), Math.cos(cameraYaw - data.prevCamYaw),
+      )) / dt
+      : 0
+    data.prevCamYaw = cameraYaw
+    data.hasPrevCamYaw = true
+
+    const STILL_ENOUGH = (25 * Math.PI) / 180 // radians per second
+
     if (!data.hasYaw) {
       data.yawOffset = targetYaw
       data.hasYaw = true
-    } else {
+    } else if (yawRate < STILL_ENOUGH) {
       // Smooth on the shortest arc, so a reading either side of due north
       // averages through 0° rather than the long way round through 180°.
       let delta = targetYaw - data.yawOffset
@@ -149,18 +185,45 @@ export const GpsAnchor = ecs.registerComponent({
      * fixed distance from wherever you happen to be standing, so the whole
      * thing is testable in any car park. 'fixed' is what you deploy.
      */
-    const target = params.get('mode') === 'relative'
-      ? destination(fix, num('bearing', 0), num('distance', 400))
-      : { lat: num('lat', schema.latitude), lon: num('lon', schema.longitude) }
-    const { east, north } = toLocalMetres(fix, target)
+    const target = (placed('mode') ?? DEFAULT_MODE) === 'relative'
+      ? destination(
+        fix,
+        num('bearing', RELATIVE_PLACEMENT.bearing),
+        num('distance', RELATIVE_PLACEMENT.distance),
+      )
+      : { lat: placedNum('lat', schema.latitude), lon: placedNum('lon', schema.longitude) }
+    /*
+     * Latch the offset and the camera position together, once per fix.
+     *
+     * Hanging the anchor off the *live* camera position every frame was wrong:
+     * the GPS offset only changes when a fix lands, so between fixes the
+     * anchor simply travelled with the camera. The content stayed a fixed
+     * distance ahead of you however far you walked — no parallax, no approach,
+     * and SLAM contributing nothing at all.
+     *
+     * Anchoring to where the camera *was* when the fix arrived instead leaves
+     * the anchor still in the SLAM frame, so walking moves you relative to it
+     * and the tracker does the work between fixes. That is the whole point of
+     * having a tracker underneath.
+     */
+    const seq = getFixSeq()
+    if (data.fixSeq !== seq) {
+      const { east, north } = toLocalMetres(fix, target)
+      const camera = w.transform.getWorldPosition(cameraEid)
+      data.fixSeq = seq
+      data.fixCamX = camera.x
+      data.fixCamZ = camera.z
+      data.fixEast = east
+      data.fixNorth = north
+    }
 
     // Local ENU offset (north = −Z, east = +X, matching flight-path.ts),
-    // rotated into the SLAM frame and hung off the camera's tracked position.
-    const camera = w.transform.getWorldPosition(cameraEid)
+    // rotated into the SLAM frame. Recomputed every frame because `yaw` is
+    // still converging, but always about the latched camera position.
     const sin = Math.sin(yaw)
     const cos = Math.cos(yaw)
-    const targetX = camera.x + east * cos + -north * sin
-    const targetZ = camera.z + -east * sin + -north * cos
+    const targetX = data.fixCamX + data.fixEast * cos + -data.fixNorth * sin
+    const targetZ = data.fixCamZ + -data.fixEast * sin + -data.fixNorth * cos
 
     if (!data.hasPosition) {
       data.posX = targetX
@@ -173,7 +236,7 @@ export const GpsAnchor = ecs.registerComponent({
       data.posZ += (targetZ - data.posZ) * k
     }
 
-    entity.setLocalPosition(vec3.xyz(data.posX, num('elev', schema.elevation), data.posZ))
+    entity.setLocalPosition(vec3.xyz(data.posX, placedNum('elev', schema.elevation), data.posZ))
     entity.set(ecs.Quaternion, quat.yRadians(yaw))
   },
 })

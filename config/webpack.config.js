@@ -85,6 +85,18 @@ const config = {
       inject: false,
       chunks: ['bundle'],
     }),
+    /*
+     * Netlify serves its own branded "page not found" for any path that does
+     * not resolve, which is where the stray "Powered by Netlify" comes from —
+     * it is not in our output anywhere. Netlify picks up a 404.html at the
+     * publish root automatically, so shipping one replaces it.
+     */
+    new HtmlWebpackPlugin({
+      template: path.join(srcPath, '404.html'),
+      filename: '404.html',
+      inject: false,
+      chunks: [],
+    }),
     ...(includeSetup ? [new HtmlWebpackPlugin({
       template: path.join(setupPath, 'setup.html'),
       filename: 'setup.html',

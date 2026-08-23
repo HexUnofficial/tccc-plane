@@ -172,13 +172,26 @@ ecs.registerBehavior((world) => {
     subject = { range, pixels }
 
     /*
-     * On-screen is decided by the bounding box, not the centre. Project all
-     * eight corners; if any lands inside the frustum the model is visible.
-     * Corners behind the camera (w <= 0) are simply not counted as visible,
-     * which is the case the naive centre test got wrong.
+     * On-screen is an overlap test between the model's projected rectangle and
+     * the viewport — not "is any corner inside it".
+     *
+     * The corner-inside version was wrong in the case that matters most: when
+     * the aircraft is close it is far bigger than the screen, so every one of
+     * its eight corners falls outside the viewport while the thing fills the
+     * view. The arrow then appeared, pointing at a centre that is the empty
+     * middle of the tow line, and span wildly as the model swept past.
+     *
+     * Corners in front of the camera give a 2D rect; if that rect overlaps
+     * [-1,1] on both axes, some part of the model is visible. A box with
+     * corners on both sides of the camera plane straddles the viewer and
+     * always counts as visible.
      */
-    let onScreen = false
-    for (let i = 0; i < 8 && !onScreen; i += 1) {
+    let minX = Infinity
+    let maxX = -Infinity
+    let minY = Infinity
+    let maxY = -Infinity
+    let inFront = 0
+    for (let i = 0; i < 8; i += 1) {
       const local = ecs.math.vec3.xyz(
         (i & 1 ? 1 : -1) * HALF.x,
         (i & 2 ? 1 : -1) * HALF.y,
@@ -186,8 +199,18 @@ ecs.registerBehavior((world) => {
       )
       const world3 = rotation.timesVec(local)
       const p = project(camera, centre.x + world3.x, centre.y + world3.y, centre.z + world3.z)
-      if (p.w > 0 && Math.abs(p.x) <= p.w && Math.abs(p.y) <= p.w) onScreen = true
+      if (p.w <= 0) continue
+      inFront += 1
+      const ndcX = p.x / p.w
+      const ndcY = p.y / p.w
+      minX = Math.min(minX, ndcX)
+      maxX = Math.max(maxX, ndcX)
+      minY = Math.min(minY, ndcY)
+      maxY = Math.max(maxY, ndcY)
     }
+    const straddles = inFront > 0 && inFront < 8
+    const onScreen = inFront > 0
+      && (straddles || (maxX >= -1 && minX <= 1 && maxY >= -1 && minY <= 1))
 
     if (arrow && arrowGlyph && arrowLabel) {
       arrow.hidden = onScreen

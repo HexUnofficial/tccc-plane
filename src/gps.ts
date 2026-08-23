@@ -17,6 +17,8 @@ const degToRad = (d: number) => (d * Math.PI) / 180
 export type Fix = { lat: number; lon: number; accuracy: number }
 
 let latest: Fix | null = null
+/** Bumped on every accepted fix, so consumers can tell a new one from a repeat. */
+let seq = 0
 let error: string | null = null
 let watchId: number | null = null
 
@@ -36,6 +38,7 @@ let minAccuracy = 100
 export function simulateFix(fix: Fix) {
   latest = fix
   error = null
+  seq += 1
 }
 
 export function startGps(options: {
@@ -85,6 +88,7 @@ export function startGps(options: {
         lon: sum.lon / recent.length,
         accuracy: sum.accuracy / recent.length,
       }
+      seq += 1
     },
     (err) => {
       error = err.code === err.PERMISSION_DENIED
@@ -96,6 +100,7 @@ export function startGps(options: {
 }
 
 export const getFix = () => latest
+export const getFixSeq = () => seq
 export const getError = () => error
 
 /**
