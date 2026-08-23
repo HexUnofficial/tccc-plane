@@ -61,7 +61,25 @@
         <input id="viewer" type="range" min="30" max="2000" step="10" value="200"></label>
     </div>
 
+    <div class="row">
+      <button id="watchable" type="button">Make it watchable</button>
+      <button id="deployed" type="button">Deployed flight path</button>
+    </div>
+    <p class="muted small">
+      <b>Make it watchable</b> scales the turn, altitude, speed and aircraft to
+      the run you have drawn — the shipped numbers are a 400 m banner up 2.5 km
+      of the Thames, and on a short run they give a nine-second lap you cannot
+      follow. <b>Deployed flight path</b> puts the shipped circuit back around
+      the pins wherever they are, so getting the real numbers back does not drag
+      you off the place you are testing.
+      Neither touches the deployment: these sliders only decide what goes in the
+      link and the QR, and the installation changes only when you paste the two
+      <b>Ship it</b> boxes.
+    </p>
+
     <p class="muted small" id="apparent"></p>
+    <p class="muted small" id="pass"></p>
+    <p class="muted small" id="too-big" hidden></p>
 
     <section>
       <h2>Test it now</h2>

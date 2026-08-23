@@ -89,6 +89,30 @@ function apparentPixels(metres: number, distance: number) {
   return { angle, pixels: (angle / 60) * 850 }
 }
 
+/**
+ * What the pass is like to *watch*, which is the half the sliders never showed.
+ *
+ * Apparent size answers "will it be a speck?" and nothing answered "will I be
+ * able to follow it?" — and that is the one that bites on a small site, where
+ * the deployed 60 m/s crosses a garden in a second and a half. Both readouts
+ * assume the spectator the preview link places: standing `viewer` metres off
+ * the anchor, square to the run, which puts the near leg `viewer − turnRadius`
+ * away across the ground.
+ *
+ * At the closest point the aircraft's whole velocity is across the line of
+ * sight, so the angle it sweeps is simply speed / range — the fastest it will
+ * ever appear to move, and the number that decides whether you can hold it in
+ * frame. The window is how long it stays inside 60° of view either side of
+ * that point, which is about what a phone held in portrait shows.
+ */
+function passFor(speed: number, altitude: number, turnRadius: number, viewer: number) {
+  const across = Math.max(viewer - turnRadius, 5)
+  const range = Math.hypot(across, altitude)
+  const rate = (speed / range) * (180 / Math.PI) // degrees per second
+  const window = (2 * range * Math.tan(Math.PI / 6)) / Math.max(speed, 0.1)
+  return { range, rate, window }
+}
+
 const runLength = () => distanceBetween(state.a, state.b)
 const runHeading = () => bearingBetween(state.a, state.b)
 const runCentre = () => destination(state.a, runHeading(), runLength() / 2)
@@ -184,6 +208,10 @@ function render() {
   el('v-speed').textContent = `${state.speed} m/s`
   el('v-size').textContent = `${state.size} m`
   el('v-viewer').textContent = `${state.viewer} m`
+  // The sliders follow state, not only the other way round: "Make it
+  // watchable" sets four of them at once, and a knob still showing the old
+  // number would put the page and the emitted link out of step.
+  for (const [id, key] of knobs) input(id).value = String(state[key])
 
   const whole = apparentPixels(state.size, state.viewer)
   // The banner is roughly a fifth of the assembly's length in height, and it is
@@ -195,6 +223,33 @@ function render() {
     + (banner.pixels < 20
       ? 'Lettering will not be readable at that size.'
       : 'Large lettering should read.')
+
+  const pass = passFor(state.speed, state.altitude, state.turnRadius, state.viewer)
+  el('pass').innerHTML = `It passes <b>${pass.range.toFixed(0)} m</b> away at `
+    + `<b>${pass.rate.toFixed(0)}°/s</b>, in frame for <b>${pass.window.toFixed(1)} s</b> `
+    + `at a time, every ${lapTime.toFixed(0)} s. `
+    // 40°/s is about where a hand-held phone stops being able to follow
+    // something: faster than that and you are panning after it, not watching
+    // it. Under 10°/s reads as a slow flypast.
+    + (pass.rate > 40
+      ? 'Too fast to keep in frame — drop the speed.'
+      : pass.rate > 20
+        ? 'Quick, but followable.'
+        : 'A steady flypast.')
+  el('pass').dataset.quality = pass.rate > 40 ? 'bad' : pass.rate > 20 ? 'rough' : 'ok'
+
+  /*
+   * A 400 m assembly on a 100 m leg is not a small aeroplane on a short
+   * circuit — it is an aeroplane four times longer than the run it is flying
+   * along, so the nose reaches the far turn while the banner is still coming
+   * out of the near one and the model flies through itself continuously.
+   */
+  el('too-big').hidden = state.size <= length
+  if (!el('too-big').hidden) {
+    el('too-big').innerHTML = `The assembly is <b>${state.size} m</b> long and the `
+      + `straight leg is only <b>${length.toFixed(0)} m</b>. It will overlap itself `
+      + 'for the whole lap. Shorten the aircraft or lengthen the run.'
+  }
 
   /*
    * Every slider on this page, as parameters the AR page actually reads.
@@ -314,6 +369,9 @@ function render() {
 
 // ── Interaction ──────────────────────────────────────────────────────────────
 
+// The deployed site, as the thing you paste back after testing somewhere else.
+input('jump').placeholder = `${INSTALLATION.lat}, ${INSTALLATION.lon}`
+
 // Either pin can be dragged; the run is simply the line between them.
 startPin.on('drag', () => {
   const { lat, lng } = startPin.getLatLng()
@@ -349,6 +407,59 @@ for (const [id, key] of knobs) {
     render()
   })
 }
+
+/**
+ * Rescale the whole circuit to the run that is drawn on the map.
+ *
+ * The shipped numbers describe an aircraft towing a 400 m banner up a 2.5 km
+ * stretch of the Thames, watched from the far bank. Drop that circuit onto a
+ * 100 m run for a test and every one of them is wrong together: a 9-second
+ * lap, an assembly four times longer than the leg it flies along, and 60 m/s
+ * a few tens of metres away, which is a blur you cannot hold in frame.
+ *
+ * These are proportions rather than fixed numbers, so the result stays sane at
+ * any size, and they are clamped to the slider ranges so the page never shows
+ * a value it cannot represent. Roughly: a turn a fifth of the leg, an altitude
+ * a quarter of it, and a speed that puts a lap at about half a minute.
+ */
+const clamp = (value: number, low: number, high: number) =>
+  Math.min(high, Math.max(low, value))
+
+el('watchable').addEventListener('click', () => {
+  const length = runLength()
+  state.turnRadius = Math.round(clamp(length / 5, 10, 200) / 5) * 5
+  state.altitude = Math.round(clamp(length / 4, 10, 200) / 5) * 5
+  state.speed = Math.round(clamp(length / 10, 5, 120))
+  state.size = Math.round(clamp(length / 3, 15, 600) / 5) * 5
+  state.viewer = Math.round(clamp(length * 0.7, 30, 2000) / 10) * 10
+  render()
+})
+
+/**
+ * The deployed circuit, put back exactly — around wherever the pins are now.
+ *
+ * Deliberately not a jump back to the installation's coordinates: the path and
+ * the place are separate decisions, and testing means taking the real circuit
+ * somewhere you can stand. Restoring the location too would undo that every
+ * time you wanted the shipped numbers back. The site itself is a paste away —
+ * its coordinates are the placeholder in "Jump to coordinates".
+ */
+el('deployed').addEventListener('click', () => {
+  state.turnRadius = FLIGHT.turnRadius
+  state.altitude = FLIGHT.altitude
+  state.speed = FLIGHT.speed
+  state.size = FLIGHT.size
+  state.viewer = 200
+
+  const centre = runCentre()
+  state.a = destination(centre, (FLIGHT_HEADING + 180) % 360, FLIGHT.length / 2)
+  state.b = destination(centre, FLIGHT_HEADING, FLIGHT.length / 2)
+  startPin.setLatLng([state.a.lat, state.a.lon])
+  endPin.setLatLng([state.b.lat, state.b.lon])
+  // A 2.5 km run does not fit the frame a 100 m one was drawn at.
+  map.setView([centre.lat, centre.lon], Math.min(map.getZoom(), 14))
+  render()
+})
 
 el('label').addEventListener('input', render)
 

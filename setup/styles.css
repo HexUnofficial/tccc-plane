@@ -56,3 +56,10 @@ button:hover, .btn:hover { border-color: var(--accent); }
 footer { margin-top: auto; padding-top: .8rem; border-top: 1px solid var(--line);
   font-size: .7rem; color: var(--dim); line-height: 1.5; }
 code { font-family: ui-monospace, Consolas, monospace; font-size: .95em; }
+
+/* Same three-step colouring as the location accuracy note: the pass readout is
+   a verdict, not a number, and "too fast to follow" should look like one. */
+#pass[data-quality="ok"] { color: #3fb950; }
+#pass[data-quality="rough"] { color: #f0883e; }
+#pass[data-quality="bad"] { color: #f85149; }
+#too-big { color: #f85149; }
