@@ -60,13 +60,20 @@ const state = {
   /**
    * Length of the whole assembly — aircraft, tow line and banner — in metres.
    *
-   * Unlike every other slider this one is *not* emitted in the URL: nothing in
-   * this project reads a `size` parameter (the model's scale lives in
-   * .expanse.json). It is here to answer "is it going to be a speck?" and to
-   * fill in FLIGHT.size in the snippet.
+   * Emitted in the URL like every other slider: model-scale.ts reads `?size=`
+   * and rescales the aircraft to match (the scene bakes the transform for the
+   * default, and that component replaces it when the parameter differs), and
+   * hud.ts sizes its on-screen-extent box from the same number. It also fills
+   * in FLIGHT.size in the snippet.
    */
   size: num('size', FLIGHT.size),
-  /** Not sent to the AR page either; only used to predict how big it will look. */
+  /**
+   * Where the spectator stands, in metres from the anchor.
+   *
+   * Not part of the deployed link — that one uses the phone's own GPS — but it
+   * is both the distance the apparent-size estimate is computed for and the
+   * standoff the simulated preview is watched from, so the two agree.
+   */
   viewer: num('viewer', 200),
 }
 
@@ -85,6 +92,9 @@ function apparentPixels(metres: number, distance: number) {
 const runLength = () => distanceBetween(state.a, state.b)
 const runHeading = () => bearingBetween(state.a, state.b)
 const runCentre = () => destination(state.a, runHeading(), runLength() / 2)
+
+/** Same config as the emitted URL, but with the sensors simulated. */
+let previewUrl = ''
 
 // ── Map ──────────────────────────────────────────────────────────────────────
 
@@ -163,6 +173,9 @@ function render() {
   // The bundled aircraft is about a third wingspan to overall length.
   el('r-span').textContent = `${(state.size * 0.36).toFixed(0)} m`
   el('r-lap').textContent = `${perimeter.toFixed(0)} m · ${lapTime.toFixed(0)}s`
+  // Named in the warning about testing away from the site, so it is the run
+  // you actually set rather than a figure in the prose that goes stale.
+  el('v-lapsize').textContent = `${length.toFixed(0)} m · ${lapTime.toFixed(0)}s lap`
 
   input('length').value = String(Math.round(length))
   el('v-length').textContent = `${length.toFixed(0)} m`
@@ -184,20 +197,21 @@ function render() {
       : 'Large lettering should read.')
 
   /*
-   * Only parameters this project actually reads.
+   * Every slider on this page, as parameters the AR page actually reads.
    *
-   * `lat`/`lon` are gps-anchor.ts; `heading`, `length`, `turn`, `alt` and
-   * `speed` are flight-motion.ts. Deliberately absent: `size` (nothing reads
-   * it — the model's scale is set in .expanse.json), `mode` and `sim` (the
-   * original's relative-placement and simulated-GPS modes were not ported),
-   * and `elev` (gps-anchor does read it, but location.ts has no elevation
-   * field for the snippet to set, so the URL and the shipped config would
-   * disagree — 0 is right for an installation on the ground). gps-anchor's
-   * `minacc`/`avg`/`smooth`/`smoothrot` and flight-motion's `bank`/`rolltime`/
-   * `path` are tuning knobs with sensible defaults, not placement, so they are
-   * left off too — add them by hand when you need them.
+   * `mode`, `lat` and `lon` are gps-anchor.ts; `heading`, `length`, `turn`,
+   * `alt` and `speed` are flight-motion.ts; `size` is model-scale.ts. `mode` is
+   * pinned to `fixed` rather than left to DEFAULT_MODE so a link keeps meaning
+   * the same place if that default is ever changed.
+   *
+   * Deliberately absent: `elev` (gps-anchor reads it, but the snippet has no
+   * elevation field to keep in step, and 0 is right for an installation on the
+   * ground), and the tuning knobs that are not placement —  gps-anchor's
+   * `minacc`/`avg`/`smooth`/`smoothrot`, flight-motion's `bank`/`rolltime`/
+   * `path`. Add those by hand when you need them.
    */
   const query = new URLSearchParams({
+    mode: 'fixed',
     lat: centre.lat.toFixed(7),
     lon: centre.lon.toFixed(7),
     heading: heading.toFixed(1),
@@ -205,6 +219,7 @@ function render() {
     turn: String(state.turnRadius),
     alt: String(state.altitude),
     speed: String(state.speed),
+    size: String(state.size),
   })
 
   /*
@@ -217,6 +232,28 @@ function render() {
   const url = `${base}?${query}`
   input('url').value = url
   el<HTMLAnchorElement>('open-ar').href = url
+
+  /*
+   * The same circuit, watched from a fixed simulated viewpoint.
+   *
+   * `?sim=1` stands in for the two sensors the real link depends on: gps-anchor
+   * fakes a fix `viewdist` metres from the anchor on bearing `viewfrom`, and a
+   * compass reading looking back at it. So the circuit appears in front of
+   * whatever you are pointing at, wherever you happen to be — which is the only
+   * way to check length, speed and scale without standing at the site.
+   *
+   * Perpendicular to the run, because standing at the anchor puts you inside
+   * the circuit: the aircraft is then either on top of you or a mile away, and
+   * for most of the lap there is nothing in front of you at all. The standoff
+   * is the "Watched from" slider, so the preview and the apparent-size estimate
+   * above describe the same viewpoint.
+   */
+  const preview = new URLSearchParams(query)
+  preview.set('sim', '1')
+  preview.set('viewdist', state.viewer.toFixed(0))
+  preview.set('viewfrom', ((heading + 90) % 360).toFixed(0))
+  previewUrl = `${base}?${preview}`
+  el<HTMLAnchorElement>('preview').href = previewUrl
 
   /*
    * A QR pointing at localhost is useless: scanned on a phone it resolves to
@@ -424,4 +461,5 @@ render()
   get length() { return runLength() },
   get centre() { return runCentre() },
   get outline() { return circuitOutline() },
+  get previewUrl() { return previewUrl },
 }

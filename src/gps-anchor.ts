@@ -10,6 +10,14 @@ import {
 const { vec3, quat } = ecs.math
 
 /**
+ * Whether the two sensors are being stood in for — the map picker's "Preview
+ * anywhere" link, and 8th Wall Studio's simulator, which supplies a tracked
+ * pose but no GPS or magnetometer. Read once: it cannot change within a
+ * session, and tick() needs it too.
+ */
+const SIMULATED = flag('sim', false)
+
+/**
  * Holds this entity at a real-world latitude and longitude, so that
  * everything parented under it is positioned in true metres of east/north.
  *
@@ -85,7 +93,7 @@ export const GpsAnchor = ecs.registerComponent({
     hasPrevCamYaw: 'boolean',
   },
   add: (_w, { schema }) => {
-    const simulate = flag('sim', false)
+    const simulate = SIMULATED
     startGps({
       minAccuracy: num('minacc', schema.minAccuracy),
       averageFixes: num('avg', schema.averageFixes),
@@ -169,7 +177,15 @@ export const GpsAnchor = ecs.registerComponent({
     if (!data.hasYaw) {
       data.yawOffset = targetYaw
       data.hasYaw = true
-    } else if (yawRate < STILL_ENOUGH) {
+    } else if (!SIMULATED && yawRate < STILL_ENOUGH) {
+      /*
+       * Skipped entirely when simulating: targetYaw is β − ψ, and a stand-in
+       * compass holds β constant, so every re-estimate is really just the
+       * camera's own yaw. Smoothing towards it would drag the whole content
+       * frame round to face you a few seconds after each turn of the phone.
+       * The offset latched on the first frame leaves the circuit where it was
+       * put, which is the entire point of a preview.
+       */
       // Smooth on the shortest arc, so a reading either side of due north
       // averages through 0° rather than the long way round through 180°.
       let delta = targetYaw - data.yawOffset

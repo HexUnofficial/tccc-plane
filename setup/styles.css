@@ -36,7 +36,7 @@ textarea { resize: vertical; line-height: 1.5; white-space: pre; }
 input[type="range"] { width: 100%; accent-color: var(--accent); }
 
 .row { display: flex; gap: .4rem; margin-bottom: .4rem; }
-/* .btn covers the anchor in "Test it now" — see the comment in setup.html. */
+/* .btn covers the anchors in "Test it now" — see the comment in setup.html. */
 button, .btn { padding: .5rem .8rem; border-radius: .4rem; border: 1px solid var(--line);
   background: #21262d; color: var(--ink); font-size: .78rem; cursor: pointer; white-space: nowrap; }
 .btn { display: inline-block; text-decoration: none; line-height: normal; }

@@ -127,7 +127,7 @@ field without republishing — same idea as the original.
 | `size` | Overall assembly length in metres (aircraft, tow line and banner) |
 | `mode` | `relative` drops the circuit near you instead of at the site |
 | `bearing`, `distance` | Relative mode: which way, and how far |
-| `ui` | `none` (default, arrow only), `minimal` (adds warnings), `debug` (telemetry) |
+| `ui` | `none` (arrow only), `minimal` (default, adds warnings), `debug` (telemetry) |
 | `farwarn` | Metres from the anchor beyond which the HUD says you are not on site |
 | `sim` | `1` fakes GPS and compass, for Studio's simulator |
 | `viewfrom`, `viewdist` | Where the simulated viewer stands |
@@ -140,6 +140,12 @@ aircraft will fly — sampled from [setup/../src/circuit.ts](src/circuit.ts), th
 same arithmetic the aircraft flies, not an approximation — with sliders for
 length, turn radius, altitude, speed and size, a generated URL, a QR code and a
 snippet to paste into `location.ts`.
+
+Every slider is carried in the link it emits, so what you set is what gets
+scanned. **Open for real** is that link; **Preview anywhere** is the same one
+plus `?sim=1`, which stands in for the GPS and the compass and drops the circuit
+in front of you at the *Watched from* distance — the only way to see the thing
+without standing at the anchor.
 
 It is an authoring tool that can move the installation, so build with
 `EXCLUDE_SETUP=1 npm run build` to leave it out of a public deploy.

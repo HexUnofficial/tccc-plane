@@ -4,22 +4,25 @@ import { getError, getFix } from './gps'
 import { getHeading } from './compass'
 import { FlightMotion } from './flight-motion'
 import { halfExtentsFor, requestedSize } from './model'
-import { INSTALLATION } from './location'
-
-const params = new URLSearchParams(location.search)
-const num = (key: string, fallback: number) => {
-  const v = Number.parseFloat(params.get(key) ?? '')
-  return Number.isFinite(v) ? v : fallback
-}
+import { DEFAULT_MODE, INSTALLATION, RELATIVE_PLACEMENT } from './location'
+import { num, params, placed, placedNum } from './config'
 
 /**
  * How much interface to draw over the camera feed, matching tccc-ar-test:
- *   none     the arrow alone (the default — over a live feed in front of an
- *            audience, the arrow is the only overlay that earns its place)
+ *   none     the arrow alone, nothing else, ever
  *   minimal  the arrow, plus a banner when something is actually wrong
  *   debug    everything, including the telemetry panel
+ *
+ * tccc-ar-test defaults to `none`, reasoning that over a live camera feed in
+ * front of an audience the arrow is the only overlay that earns its place. Its
+ * own README admits what that costs: a denied permission or a lost fix then
+ * says nothing at all. That cost is not hypothetical — being several km from
+ * the installation looks exactly like broken AR, and in silence there is no
+ * way to tell the two apart. `minimal` still shows nothing while things are
+ * working, so it keeps the clean feed and speaks up only when it must.
+ * `?ui=none` restores the original's behaviour.
  */
-let ui = params.get('ui') ?? 'none'
+let ui = params.get('ui') ?? 'minimal'
 
 /** Past this, walking is imperceptible and it reads as "the AR is broken". */
 const FAR_WARNING = num('farwarn', 1500)
@@ -118,12 +121,26 @@ ecs.registerBehavior((world) => {
 
   const fix = getFix()
   const heading = getHeading()
-  // Must resolve the anchor the same way gps-anchor.ts does, or the readout
-  // and the warning describe a different place from the one being rendered.
-  const relative = params.get('mode') === 'relative'
+  /*
+   * Must resolve the anchor the same way gps-anchor.ts does, or the readout and
+   * the warning describe a different place from the one being rendered — down
+   * to reading placement through `placed`/`placedNum`, so LOCKED suppresses it
+   * here too, and to taking the defaults from RELATIVE_PLACEMENT rather than
+   * carrying a second set of numbers.
+   *
+   * The one thing this cannot see is the component's own schema, which
+   * .expanse.json overrides per entity; INSTALLATION is the nearest thing
+   * available, and the two are kept in step by the map picker's "Ship it"
+   * snippet setting both.
+   */
+  const relative = (placed('mode') ?? DEFAULT_MODE) === 'relative'
   const anchor = fix && relative
-    ? destination(fix, num('bearing', 0), num('distance', 400))
-    : { lat: num('lat', INSTALLATION.lat), lon: num('lon', INSTALLATION.lon) }
+    ? destination(
+      fix,
+      num('bearing', RELATIVE_PLACEMENT.bearing),
+      num('distance', RELATIVE_PLACEMENT.distance),
+    )
+    : { lat: placedNum('lat', INSTALLATION.lat), lon: placedNum('lon', INSTALLATION.lon) }
   const distance = fix ? distanceBetween(fix, anchor) : null
 
   /*

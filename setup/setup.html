@@ -4,6 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Flight path setup — TCCC AR</title>
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" href="./assets/icons/icon-192.png" sizes="192x192">
+  <link rel="apple-touch-icon" href="./assets/icons/icon-180.png">
 </head>
 <body>
   <div id="map"></div>
@@ -64,21 +67,31 @@
       <h2>Test it now</h2>
       <div class="row">
         <!--
-          A real link, not a button calling window.open(). A window.open() with
-          a features string is classified as a popup request, and iOS Safari
+          Real links, not buttons calling window.open(). A window.open() with a
+          features string is classified as a popup request, and iOS Safari
           blocks those silently — the button simply did nothing on the exact
           device you test on site with. An anchor click is a user-initiated
-          navigation and cannot be popup-blocked. The href is set by render().
+          navigation and cannot be popup-blocked. hrefs are set by render().
         -->
-        <a id="open-ar" class="btn primary" target="_blank" rel="noopener">Open the AR page</a>
+        <a id="preview" class="btn primary" target="_blank" rel="noopener">Preview anywhere</a>
+        <a id="open-ar" class="btn" target="_blank" rel="noopener">Open for real</a>
         <button id="copy-url" type="button">Copy</button>
       </div>
       <p class="muted small">
-        This uses the device's real camera, compass and GPS, so it only shows
-        anything on a phone standing near the site. There is no desktop
-        simulator in this project — the original's <b>Preview here</b> button
-        drove a <code>?sim=1</code> fake-GPS mode that has not been ported, so
-        rather than emit a link that silently does nothing, it is gone.
+        <b>Preview anywhere</b> adds <code>?sim=1</code>, which fakes the GPS and
+        the compass: the circuit appears in front of you at the
+        <b>Watched from</b> distance, wherever you are standing. It still needs a
+        phone — the camera is a real one — but not the site. <b>Open for real</b>
+        is the link in the QR: actual GPS and compass, so it only shows anything
+        standing at the anchor.
+      </p>
+      <p class="muted small">
+        Worth knowing before you test in the garden: the anchor is the
+        <em>middle</em> of the run, so scanning the QR at home stands you inside
+        a <b id="v-lapsize">—</b> circuit. The aircraft is overhead for a few
+        seconds of each lap and hundreds of metres away for the rest of it, with
+        the arrow swinging round after it. Shorten the run and drop the speed to
+        see it properly on a small site, or use <b>Preview anywhere</b>.
       </p>
       <input id="url" type="text" readonly>
       <div class="qr">
@@ -121,10 +134,11 @@
     <footer>
       An authoring tool, but it <em>is</em> built and deployed by default, so
       anyone who finds <code>/setup.html</code> can generate a link that moves
-      the aircraft. It only emits links — nothing here writes to the scene —
-      but this project has no equivalent of the original's <code>LOCKED</code>
-      flag, so those links do work. Build with <code>EXCLUDE_SETUP=1</code> to
-      leave the page out.
+      the aircraft. It only emits links — nothing here writes to the scene.
+      Build with <code>EXCLUDE_SETUP=1</code> to leave the page out, or set
+      <code>LOCKED</code> in <code>src/location.ts</code> to make the AR page
+      ignore placement set from a URL — which also stops these links working,
+      so ship the values with the <b>Ship it</b> snippet first.
     </footer>
   </aside>
 </body>
