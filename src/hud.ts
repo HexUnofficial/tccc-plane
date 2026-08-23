@@ -68,6 +68,15 @@ function project(cam: Cam, x: number, y: number, z: number) {
 const motionQuery = ecs.defineQuery([FlightMotion])
 
 let smoothedFps = 60
+/*
+ * The arrow's own state, kept across frames: whether it is up, when that last
+ * changed (for the dwell), its unwrapped rotation, and whether the next frame
+ * should snap to a new angle instead of sweeping to it.
+ */
+let arrowShown = false
+let arrowChanged = 0
+let arrowAngle = 0
+let arrowSnap = true
 let lastText = ''
 let lastTone = ''
 const lastField: Record<string, string> = {}
@@ -226,23 +235,86 @@ ecs.registerBehavior((world) => {
       maxY = Math.max(maxY, ndcY)
     }
     const straddles = inFront > 0 && inFront < 8
-    const onScreen = inFront > 0
-      && (straddles || (maxX >= -1 && minX <= 1 && maxY >= -1 && minY <= 1))
+    const overlaps = (edge: number) =>
+      maxX >= -edge && minX <= edge && maxY >= -edge && minY <= edge
+
+    /*
+     * Hysteresis, because a bare in-or-out test flickers.
+     *
+     * The aircraft crosses the view at tens of degrees a second, so its
+     * projected rect sits exactly on the viewport edge for several frames on
+     * the way past — and a test with one threshold then flips every frame,
+     * which is the arrow and the model appearing to take turns. Showing the
+     * arrow needs the model fully outside the viewport; hiding it again only
+     * needs the model back inside a border a third wider. Nothing can sit on
+     * both sides of that gap at once.
+     */
+    const MARGIN = 1.35
+    const onScreen = inFront > 0 && (straddles || overlaps(arrowShown ? MARGIN : 1))
 
     if (arrow && arrowGlyph && arrowLabel) {
-      arrow.hidden = onScreen
-      if (!onScreen) {
+      /*
+       * And a dwell, for the case the margin cannot cover: something moving
+       * fast enough crosses the whole gap between frames. A quarter second is
+       * beneath noticing when the state is real and long enough to swallow a
+       * flip that is not.
+       */
+      const now = world.time.elapsed
+      if (onScreen === arrowShown && now - arrowChanged > 250) {
+        arrowShown = !onScreen
+        arrowChanged = now
+      }
+      arrow.hidden = !arrowShown
+
+      if (arrowShown) {
         const c = project(camera, centre.x, centre.y, centre.z)
         // project() mirrors anything behind the camera, so un-mirror it.
         const sign = c.w < 0 ? -1 : 1
         const ndcX = (sign * c.x) / Math.abs(c.w || 1e-6)
         const ndcY = (sign * c.y) / Math.abs(c.w || 1e-6)
-        arrowGlyph.style.rotate = `${((Math.atan2(ndcX, ndcY) * 180) / Math.PI).toFixed(1)}deg`
+        const target = (Math.atan2(ndcX, ndcY) * 180) / Math.PI
+
+        /*
+         * Track the angle unwrapped, so `rotate` never jumps by more than half
+         * a turn.
+         *
+         * The glyph has a 120 ms CSS transition on it, and CSS interpolates
+         * the number it is given: hand it 179° one frame and −179° the next —
+         * which is what atan2 does every time the aircraft passes behind you —
+         * and it animates 358° the long way round rather than 2° across. That
+         * is the arrow spinning, and it spins hardest exactly when the target
+         * is moving fastest. Accumulating the shortest arc keeps the number
+         * continuous, so the transition always takes the short way.
+         */
+        let delta = target - arrowAngle
+        delta -= 360 * Math.round(delta / 360)
+        arrowAngle += delta
+
+        // Reappearing after being hidden, the old angle is stale and nobody
+        // watched it change — snap rather than sweep to the new one.
+        if (arrowSnap) {
+          arrowGlyph.style.transition = 'none'
+          arrowAngle = target
+        }
+        arrowGlyph.style.rotate = `${arrowAngle.toFixed(1)}deg`
+        if (arrowSnap) {
+          // Read back a layout property to flush the snap before the
+          // transition goes back on, or the browser coalesces the two and
+          // animates from the stale angle anyway.
+          void arrowGlyph.getBoundingClientRect()
+          arrowGlyph.style.transition = ''
+          arrowSnap = false
+        }
+
         arrowLabel.textContent = formatDistance(range)
+      } else {
+        arrowSnap = true
       }
     }
   } else if (arrow) {
     arrow.hidden = true
+    arrowShown = false
+    arrowSnap = true
   }
 
   if (ui !== 'debug') return

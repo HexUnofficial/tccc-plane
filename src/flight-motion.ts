@@ -77,7 +77,20 @@ export const FlightMotion = ecs.registerComponent({
   tick: (w, { eid, data }) => {
     const path = paths.get(eid)
     if (!path) return
-    path.apply(w.getEntity(eid), w.time.elapsed - data.startTime)
+    /*
+     * Seconds. `time.elapsed` is milliseconds — as the /1000 in hud.ts and
+     * gps-anchor.ts and the 6000 ms gate timeout all attest — and the circuit
+     * is parametrised by distance travelled at `speed` metres per *second*.
+     *
+     * Handing it milliseconds flew the aircraft a thousand times too fast: at
+     * the deployed 60 m/s that is 60 km/s, about eleven laps of the Thames
+     * circuit every second. It is not that the model was missing, it was
+     * somewhere else entirely on each frame — which is what the arrow was
+     * chasing, and why shortening the run and slowing the speed barely helped.
+     * tccc-ar-test accumulated three.js's clock.getDelta(), already in seconds,
+     * so the units were only ever wrong on this side of the port.
+     */
+    path.apply(w.getEntity(eid), (w.time.elapsed - data.startTime) / 1000)
   },
   remove: (_w, { eid }) => {
     paths.delete(eid)
