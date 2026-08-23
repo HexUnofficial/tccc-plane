@@ -1,31 +1,18 @@
-# Pinned here rather than set in the Netlify dashboard, so the build is
-# reproducible from the repo.
 [build]
   command = "npm run build"
   publish = "dist"
 
 [build.environment]
-  # webpack 5 + ts-loader; matches the Node the project is developed against.
   NODE_VERSION = "20"
 
-# Without an explicit type the GLB is served as application/octet-stream,
-# which some loaders refuse. It is also content-stable, so cache it hard.
+# The 8th Wall runtime ships .wasm and .glb assets that Netlify does not
+# always type correctly on its own.
 [[headers]]
-  for = "/assets/*.glb"
-  [headers.values]
-    Content-Type = "model/gltf-binary"
-    Cache-Control = "public, max-age=31536000, immutable"
-
-# The 8th Wall runtime ships a WASM module; the wrong MIME type makes
-# WebAssembly.instantiateStreaming fail.
-[[headers]]
-  for = "/external/runtime/*.wasm"
+  for = "/*.wasm"
   [headers.values]
     Content-Type = "application/wasm"
 
-# Camera, geolocation and motion sensors are all refused without these —
-# and all three are load-bearing here, not optional extras.
 [[headers]]
-  for = "/*"
+  for = "/*.glb"
   [headers.values]
-    Permissions-Policy = "camera=(self), geolocation=(self), accelerometer=(self), gyroscope=(self), magnetometer=(self), xr-spatial-tracking=(self)"
+    Content-Type = "model/gltf-binary"
