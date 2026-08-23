@@ -118,6 +118,16 @@ const config = {
           to: path.join(distPath, 'assets'),
           noErrorOnMissing: true,
         },
+        /*
+         * At the publish root, not under assets/: browsers request
+         * /favicon.ico on their own without being told to, and with a 404.html
+         * in place that request would otherwise be answered with the whole
+         * branded not-found page.
+         */
+        {
+          from: path.join(srcPath, 'favicon.ico'),
+          to: distPath,
+        },
         {
           from: path.join(rootPath, 'image-targets'),
           to: path.join(distPath, 'image-targets'),
