@@ -1,37 +1,5 @@
 {
   "objects": {
-    "b534657a-38e6-4275-a37d-77b655561d5b": {
-      "id": "b534657a-38e6-4275-a37d-77b655561d5b",
-      "position": [
-        0,
-        0,
-        0
-      ],
-      "rotation": [
-        0,
-        0,
-        0,
-        1
-      ],
-      "scale": [
-        1,
-        1,
-        1
-      ],
-      "components": {
-        "92cc446e-2931-499b-9be0-0472f042433a": {
-          "id": "92cc446e-2931-499b-9be0-0472f042433a",
-          "name": "logo",
-          "parameters": {}
-        }
-      },
-      "name": "Logo",
-      "order": 8.599486645057333,
-      "shadow": {
-        "castShadow": true
-      },
-      "prefab": true
-    },
     "492cfe2c-9334-4a9c-a48a-be80132af9fb": {
       "id": "492cfe2c-9334-4a9c-a48a-be80132af9fb",
       "position": [
@@ -215,307 +183,6 @@
       "name": "Text",
       "order": 1.9632252822400198
     },
-    "bc7753ae-2b39-4f48-910a-7921b756487b": {
-      "id": "bc7753ae-2b39-4f48-910a-7921b756487b",
-      "position": [
-        -3.838230904102158,
-        5.087467701098376,
-        -1.3514446106113431
-      ],
-      "rotation": [
-        -0.7071067999999991,
-        0,
-        0,
-        0.7071067623730954
-      ],
-      "scale": [
-        50,
-        50.00000266062409,
-        50.00000266062409
-      ],
-      "geometry": {
-        "type": "plane",
-        "width": 1,
-        "height": 1
-      },
-      "material": {
-        "type": "shadow",
-        "color": "#000000",
-        "opacity": 0.4
-      },
-      "parentId": "84028e73-ee70-412d-b8d4-c09bf07c655c",
-      "components": {
-        "efcfa10c-5fe6-4a92-85de-a602a68683b2": {
-          "id": "efcfa10c-5fe6-4a92-85de-a602a68683b2",
-          "name": "tap-to-place",
-          "parameters": {
-            "prefab": {
-              "type": "entity",
-              "id": "b534657a-38e6-4275-a37d-77b655561d5b"
-            }
-          }
-        }
-      },
-      "name": "Ground",
-      "order": 5.877553308364804,
-      "shadow": {
-        "receiveShadow": true
-      }
-    },
-    "17af117a-efce-48dd-857e-e383a3649c7b": {
-      "id": "17af117a-efce-48dd-857e-e383a3649c7b",
-      "position": [
-        0,
-        -0.01,
-        0
-      ],
-      "rotation": [
-        -0.707106799999999,
-        0,
-        0,
-        0.7071067623730954
-      ],
-      "scale": [
-        50,
-        50,
-        50
-      ],
-      "geometry": {
-        "type": "plane",
-        "width": 1,
-        "height": 1
-      },
-      "material": {
-        "type": "hider"
-      },
-      "parentId": "84028e73-ee70-412d-b8d4-c09bf07c655c",
-      "components": {},
-      "name": "Hider",
-      "order": 7.322553197845954
-    },
-    "9b5668bc-b512-4bb6-9c6b-8ba97d3f8af0": {
-      "id": "9b5668bc-b512-4bb6-9c6b-8ba97d3f8af0",
-      "position": [
-        16.857510635812545,
-        15.927690665172552,
-        0
-      ],
-      "rotation": [
-        0,
-        0,
-        0,
-        1
-      ],
-      "scale": [
-        1,
-        1,
-        1
-      ],
-      "geometry": null,
-      "material": null,
-      "parentId": "904308fe-98f5-4c93-bf62-f39d50c6e602",
-      "components": {},
-      "ui": {
-        "text": "Tap to place",
-        "width": "100%",
-        "height": 100,
-        "type": "overlay",
-        "verticalTextAlign": "start",
-        "textAlign": "center",
-        "fontSize": 32,
-        "position": "absolute",
-        "top": 10,
-        "left": 10,
-        "bottom": "",
-        "right": "",
-        "stackingOrder": -1,
-        "color": "#ffffff",
-        "font": {
-          "type": "font",
-          "font": "Roboto"
-        }
-      },
-      "name": "Tap Prompt",
-      "order": 10.427624126637916
-    },
-    "637f7413-261d-48bb-99c9-154bd99360da": {
-      "id": "637f7413-261d-48bb-99c9-154bd99360da",
-      "position": [
-        16.857510635812545,
-        15.927690665172552,
-        0
-      ],
-      "rotation": [
-        0,
-        0,
-        0,
-        1
-      ],
-      "scale": [
-        1,
-        1,
-        1
-      ],
-      "geometry": null,
-      "material": null,
-      "parentId": "904308fe-98f5-4c93-bf62-f39d50c6e602",
-      "components": {},
-      "ui": {
-        "text": "Tap to place",
-        "width": "100%",
-        "height": 100,
-        "type": "overlay",
-        "verticalTextAlign": "start",
-        "textAlign": "center",
-        "fontSize": 32,
-        "position": "absolute",
-        "top": 12,
-        "left": 12,
-        "bottom": "",
-        "right": "",
-        "stackingOrder": -2,
-        "color": "#000000",
-        "font": {
-          "type": "font",
-          "font": "Roboto"
-        }
-      },
-      "name": "Tap Prompt Shadow",
-      "order": 11.644447501347162
-    },
-    "a02b4479-461e-40c2-ba91-0ccabbd1bd83": {
-      "id": "a02b4479-461e-40c2-ba91-0ccabbd1bd83",
-      "position": [
-        0,
-        0,
-        0
-      ],
-      "rotation": [
-        0,
-        0,
-        0,
-        1
-      ],
-      "scale": [
-        1,
-        1,
-        1
-      ],
-      "parentId": "b534657a-38e6-4275-a37d-77b655561d5b",
-      "components": {
-        "a2c75775-5a0f-44d7-910c-c111bc850bf6": {
-          "id": "a2c75775-5a0f-44d7-910c-c111bc850bf6",
-          "name": "position-animation",
-          "parameters": {
-            "fromY": -2,
-            "loop": false,
-            "easeOut": true,
-            "easingFunction": "Elastic",
-            "duration": 2000,
-            "toY": 0.3
-          }
-        }
-      },
-      "name": "Model",
-      "order": 1.1209803013844988,
-      "gltfModel": {
-        "src": {
-          "type": "asset",
-          "asset": "assets/8-jewel.glb"
-        },
-        "animationClip": "",
-        "loop": true
-      },
-      "shadow": {
-        "castShadow": true
-      }
-    },
-    "5ac3deca-2126-4b56-b6a2-1442d035047a": {
-      "id": "5ac3deca-2126-4b56-b6a2-1442d035047a",
-      "position": [
-        -8.46107198766815,
-        7.181789778649719,
-        0
-      ],
-      "rotation": [
-        0,
-        0,
-        0,
-        1
-      ],
-      "scale": [
-        1,
-        1,
-        1
-      ],
-      "geometry": null,
-      "material": null,
-      "parentId": "904308fe-98f5-4c93-bf62-f39d50c6e602",
-      "components": {
-        "2100d3e9-8fed-4773-bc39-6f2ca5042375": {
-          "id": "2100d3e9-8fed-4773-bc39-6f2ca5042375",
-          "name": "reset-button",
-          "parameters": {}
-        }
-      },
-      "ui": {
-        "type": "overlay",
-        "width": 100,
-        "height": 36,
-        "background": "#cb1010",
-        "borderRadius": 5,
-        "flexDirection": "row",
-        "backgroundOpacity": 1,
-        "padding": "10",
-        "gap": "6",
-        "alignItems": "center",
-        "justifyContent": "center",
-        "position": "absolute",
-        "top": "",
-        "left": "",
-        "bottom": 20,
-        "right": 20,
-        "stackingOrder": 2
-      },
-      "name": "Button",
-      "order": 13.280785398189009
-    },
-    "543540e1-7086-4068-a4e3-394084c146f8": {
-      "id": "543540e1-7086-4068-a4e3-394084c146f8",
-      "position": [
-        0,
-        0,
-        0
-      ],
-      "rotation": [
-        0,
-        0,
-        0,
-        1
-      ],
-      "scale": [
-        1,
-        1,
-        1
-      ],
-      "geometry": null,
-      "material": null,
-      "parentId": "5ac3deca-2126-4b56-b6a2-1442d035047a",
-      "components": {},
-      "name": "Text",
-      "ui": {
-        "width": 50,
-        "height": 14,
-        "text": "Reset",
-        "color": "#ffffff",
-        "fontSize": 16,
-        "font": {
-          "type": "font",
-          "font": "Roboto"
-        }
-      },
-      "order": 1.2563868233834565
-    },
     "904308fe-98f5-4c93-bf62-f39d50c6e602": {
       "id": "904308fe-98f5-4c93-bf62-f39d50c6e602",
       "position": [
@@ -542,6 +209,199 @@
       "order": 14.958687422311806,
       "ui": {
         "type": "overlay"
+      }
+    },
+    "93e31971-a37d-4f17-9b42-51f2be3861f6": {
+      "id": "93e31971-a37d-4f17-9b42-51f2be3861f6",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "geometry": null,
+      "material": null,
+      "parentId": "84028e73-ee70-412d-b8d4-c09bf07c655c",
+      "name": "GPS Anchor",
+      "order": 21,
+      "components": {
+        "ba99d51e-6f3c-414f-85fd-ddeb8bc66bf1": {
+          "id": "ba99d51e-6f3c-414f-85fd-ddeb8bc66bf1",
+          "name": "gps-anchor",
+          "parameters": {
+            "latitude": 51.5104797,
+            "longitude": -0.0900796,
+            "elevation": 0,
+            "minAccuracy": 100,
+            "averageFixes": 3,
+            "headingSmoothing": 4,
+            "positionSmoothing": 1
+          }
+        }
+      }
+    },
+    "75a495d1-5849-4963-8966-8572e226fc7d": {
+      "id": "75a495d1-5849-4963-8966-8572e226fc7d",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "geometry": null,
+      "material": null,
+      "parentId": "93e31971-a37d-4f17-9b42-51f2be3861f6",
+      "name": "Motion",
+      "order": 22,
+      "components": {
+        "085d77f1-d442-41b2-a185-be0c1ee9780e": {
+          "id": "085d77f1-d442-41b2-a185-be0c1ee9780e",
+          "name": "flight-motion",
+          "parameters": {
+            "shape": "racetrack",
+            "length": 2475,
+            "turnRadius": 55,
+            "speed": 60,
+            "altitude": 50,
+            "maxBank": 45,
+            "rollTime": 0.8,
+            "radius": 30,
+            "period": 16,
+            "heading": 114.5
+          }
+        }
+      }
+    },
+    "66cf2a2a-8023-4fa6-b6d4-63394e544d20": {
+      "id": "66cf2a2a-8023-4fa6-b6d4-63394e544d20",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "rotation": [
+        0,
+        1,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "geometry": null,
+      "material": null,
+      "parentId": "75a495d1-5849-4963-8966-8572e226fc7d",
+      "components": {},
+      "name": "Yaw",
+      "order": 23
+    },
+    "822c1184-a2b9-42ce-bf7c-1282917e7448": {
+      "id": "822c1184-a2b9-42ce-bf7c-1282917e7448",
+      "position": [
+        0.0000017165790923305044,
+        3.2005989256242584,
+        101.47742651819497
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "scale": [
+        0.611780848501984,
+        0.611780848501984,
+        0.611780848501984
+      ],
+      "geometry": null,
+      "material": null,
+      "parentId": "66cf2a2a-8023-4fa6-b6d4-63394e544d20",
+      "components": {},
+      "name": "Aircraft",
+      "order": 24,
+      "gltfModel": {
+        "src": {
+          "type": "asset",
+          "asset": "assets/tccc-airplane.glb"
+        },
+        "animationClip": "Propeller|PropellerAction.001",
+        "loop": true
+      }
+    },
+    "839e9002-f71a-4992-9654-2e603d16f9f6": {
+      "id": "839e9002-f71a-4992-9654-2e603d16f9f6",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "geometry": null,
+      "material": null,
+      "parentId": "904308fe-98f5-4c93-bf62-f39d50c6e602",
+      "name": "HUD",
+      "order": 25,
+      "ui": {
+        "text": "Waiting for GPS and compass…",
+        "width": "100%",
+        "height": 40,
+        "type": "overlay",
+        "position": "absolute",
+        "top": "10",
+        "left": "10",
+        "textAlign": "left",
+        "verticalTextAlign": "start",
+        "fontSize": 16,
+        "color": "#ffffff",
+        "font": {
+          "type": "font",
+          "font": "Roboto"
+        },
+        "stackingOrder": 5
+      },
+      "components": {
+        "cf586ecc-8bfa-4aa0-ad24-dd370316be33": {
+          "id": "cf586ecc-8bfa-4aa0-ad24-dd370316be33",
+          "name": "flight-hud",
+          "parameters": {
+            "target": {
+              "type": "entity",
+              "id": "75a495d1-5849-4963-8966-8572e226fc7d"
+            }
+          }
+        }
       }
     }
   },
