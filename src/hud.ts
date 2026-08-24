@@ -2,10 +2,7 @@ import * as ecs from '@8thwall/ecs'
 import { bearingBetween, compassPoint, destination, distanceBetween } from './geo'
 import { getError, getFix } from './gps'
 import { getCompassState, getHeading } from './compass'
-import {
-  alignRunWithCamera, getCameraYaw, getEntityYaw, getFrameSource, getFrameYaw,
-  getWalkProgress,
-} from './gps-anchor'
+import { alignRunWithCamera, getCameraYaw, getFrameSource, getFrameYaw } from './gps-anchor'
 import { FlightMotion } from './flight-motion'
 import { halfExtentsFor, requestedSize } from './model'
 import { modelIsInScene } from './model-ready'
@@ -203,23 +200,13 @@ ecs.registerBehavior((world) => {
    */
   let blocking = true
   const gpsError = getError()
-  const walk = getWalkProgress()
   if (gpsError) {
     text = gpsError
     tone = 'error'
   } else if (!fix) {
     text = 'Waiting for GPS…'
     tone = 'warn'
-  } else if (walk.required && !walk.ready) {
-    /*
-     * The compass is not trusted to orient this, so the only thing that can is
-     * a short walk — and someone who is not told that will simply stand there.
-     * Counting up is the difference between an instruction and a spinner.
-     */
-    text = `Walk a few steps so the view can line up — ${walk.walked.toFixed(0)} of `
-      + `${walk.needed.toFixed(0)} m`
-    tone = 'warn'
-  } else if (heading === null && !walk.required) {
+  } else if (heading === null) {
     // A phone held low reports a heading that is steady and meaningless, so
     // it is refused — and the only thing that fixes it is lifting the phone.
     text = getCompassState() === 'flat'
@@ -411,15 +398,12 @@ ecs.registerBehavior((world) => {
   // identical to one that was obeyed, until you read this.
   setField('link', linkIgnored() ? 'ignored — using shipped' : 'honoured')
   setField('frameby', getFrameSource())
-  setField('walked', `${walk.walked.toFixed(0)} / ${walk.needed.toFixed(0)} m`)
   // The frame: how far the content is turned, and where SLAM thinks the camera
   // points. heading − camyaw should equal frame once it has settled; if it does
   // and the run is still across the river, the compass reading is the thing
   // that is wrong, not the arithmetic on it.
   setField('frame', `${getFrameYaw().toFixed(0)}°`)
   setField('camyaw', `${getCameraYaw().toFixed(0)}°`)
-  // Should match the row above. A right angle between them is the fault.
-  setField('entyaw', `${getEntityYaw().toFixed(0)}°`)
   setField('anchor', `${anchor.lat.toFixed(6)}, ${anchor.lon.toFixed(6)}`)
   setField('distance', distance === null ? '—' : formatDistance(distance))
   setField('bearing', fix

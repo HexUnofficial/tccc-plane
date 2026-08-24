@@ -28,36 +28,6 @@ const SIMULATED = flag('sim', false)
  */
 let frameYaw = 0
 let cameraYawDegrees = 0
-let entityYawDegrees = 0
-
-/**
- * Where the camera points, taken from the camera that actually renders.
- *
- * There are two answers to this question and they are not required to agree.
- * `w.transform.getWorldQuaternion(cameraEid)` is the pose the entity system
- * holds; `w.three.activeCamera` is the three.js camera the frame is drawn
- * with, and the engine is free to apply the device's screen orientation to the
- * latter on its way to the screen. Reading the first while the picture comes
- * from the second puts the content frame a quarter turn out — and since the
- * screen orientation is whatever it was when the session started, that quarter
- * turn is a different one each time, which is exactly the fault being chased:
- * placement right, path square to it, and no two runs alike.
- *
- * The renderer's camera is the one to believe. It is the camera the aircraft
- * is projected through in hud.ts, which is why the arrow has always pointed at
- * the aircraft correctly however wrong the flight path looked. The entity pose
- * stays as a fallback, and is published beside it so the two can be compared
- * on the telemetry panel.
- */
-function forwardOf(w: ecs.World, cameraEid: ecs.Eid) {
-  const rendered = (w.three.activeCamera as unknown as {
-    matrixWorld?: { elements: ArrayLike<number> }
-  } | undefined)?.matrixWorld?.elements
-  // Column-major: elements 8..10 are the camera's local +Z in world space, and
-  // a camera looks down its own −Z.
-  if (rendered) return { x: -rendered[8], y: -rendered[9], z: -rendered[10] }
-  return w.transform.getWorldQuaternion(cameraEid).timesVec(vec3.xyz(0, 0, -1))
-}
 
 /*
  * ── ALIGNING BY HAND ──────────────────────────────────────────────────────
@@ -106,70 +76,9 @@ const LOCK_MS = num('lock', 6) * 1000
 let firstHeadingAt = 0
 let locked = false
 
-/*
- * ── NORTH FROM WALKING, NOT FROM THE MAGNETOMETER ─────────────────────────
- *
- * This is the primary source. The compass only stands in until it arrives.
- *
- *
- * Locking the frame stops a wandering magnetometer from dragging it, but it
- * cannot rescue a reading that was wrong to begin with: a phone whose compass
- * is out by a right angle at the moment of the lock is out by a right angle
- * for the rest of the session, permanently and confidently.
- *
- * There is a second way to find north, and it does not involve the
- * magnetometer at all. Walk a few metres. GPS says that displacement had true
- * bearing X. The tracker says the same displacement had bearing Y inside its
- * own world. The difference between them is the offset between that world and
- * true north — which is precisely the number the compass was being asked for,
- * measured instead from two instruments that are trustworthy.
- *
- * It costs walking, and its accuracy is the GPS error over the distance
- * covered: a 5 m fix across a 12 m walk is worth about 25°, across 50 m about
- * 6°. So it takes the longest baseline it has seen and keeps improving as
- * someone walks further, each estimate replacing the last. Once one exists the
- * magnetometer is never consulted again — not for turning either, which the
- * tracker does far better than a compass can.
- *
- * Standing still it never arrives, which is why the compass still bootstraps
- * the first placement: something has to be on screen before anyone has taken a
- * step. That first placement is the only thing the compass is trusted with,
- * and the walk overrules it the moment it can.
- */
-const WALK_MIN = num('walk', 12)
-
-/**
- * Refuse to place anything until the walk has given us north.
- *
- * On by default, because the magnetometer has not earned the benefit of the
- * doubt: it has put the run square to the river on this device, differently
- * each session, and every attempt to correct its output has been a guess about
- * a sensor that cannot be read from here. The walk estimate does not involve
- * it, cannot be biased by steel or a phone case, and is checkable — GPS says
- * the walk went that way, the tracker agrees it went that way, and the angle
- * between the two answers is the only thing being asked for.
- *
- * The price is asking someone to take a dozen steps before the aircraft
- * appears, which is a normal thing for a geospatial experience to ask and a
- * great deal better than showing them a flight path at right angles to the
- * river. `?walkfirst=0` restores the old behaviour of trusting the compass.
- */
-const WALK_FIRST = flag('walkfirst', false) && !SIMULATED
-
-/** Metres walked so far, and how many are needed, for the message on screen. */
-export const getWalkProgress = () => ({
-  walked: walkedNow, needed: WALK_MIN, ready: walkYaw !== null, required: WALK_FIRST,
-})
-let walkOrigin: { lat: number; lon: number; camX: number; camZ: number } | null = null
-let walkBaseline = 0
-let walkYaw: number | null = null
-/** How far from the start we are right now, accepted or not, for the counter. */
-let walkedNow = 0
-
 /** What is holding the content frame, for the telemetry panel. */
 export const getFrameSource = () => {
   if (aligned) return 'aligned by hand'
-  if (walkYaw !== null) return `walked ${walkBaseline.toFixed(0)} m`
   return locked ? 'compass, locked' : 'compass, settling'
 }
 
@@ -182,8 +91,6 @@ export const isAligned = () => aligned
 /** Degrees the content frame is rotated by, and the camera's yaw within SLAM. */
 export const getFrameYaw = () => (frameYaw * 180) / Math.PI
 export const getCameraYaw = () => cameraYawDegrees
-/** The entity system's camera yaw. Differing from the rendered one is the bug. */
-export const getEntityYaw = () => entityYawDegrees
 
 /**
  * Holds this entity at a real-world latitude and longitude, so that
@@ -290,36 +197,22 @@ export const GpsAnchor = ecs.registerComponent({
     const fix = getFix()
     const heading = getHeading()
 
-    /*
-     * Until we know where things are *and* which way round they go, anything
-     * drawn is in the wrong place — which reads as broken AR rather than as AR
-     * that has not started. Under WALK_FIRST that includes knowing north from
-     * the walk rather than from the magnetometer, so the aircraft waits for a
-     * dozen steps instead of appearing somewhere confidently wrong.
-     */
-    const orientedByWalk = walkYaw !== null
-    if (!fix || (WALK_FIRST ? !orientedByWalk : heading === null)) {
+    // Until both sensors have reported, anything we drew would be in the
+    // wrong place — which reads to a viewer as "the AR is broken" rather than
+    // "the AR is still starting".
+    if (!fix || heading === null) {
       entity.hide()
-      // Still run the fix bookkeeping below, or the walk can never complete.
-    } else {
-      entity.show()
+      return
     }
-
-    // A heading is still wanted for the compass bootstrap when WALK_FIRST is
-    // off; with it on, everything below simply waits for the walk.
-    if (heading === null && !WALK_FIRST) return
+    entity.show()
 
     const dt = w.time.delta / 1000
 
     // Camera yaw within the SLAM frame, from its forward vector rather than
     // Euler angles, to sidestep any convention mismatch.
     const cameraEid = w.camera.getActiveEid()
-    const forward = forwardOf(w, cameraEid)
+    const forward = w.transform.getWorldQuaternion(cameraEid).timesVec(vec3.xyz(0, 0, -1))
     const cameraYaw = Math.atan2(forward.x, -forward.z)
-
-    // The entity system's answer to the same question, for comparison only.
-    const entityForward = w.transform.getWorldQuaternion(cameraEid).timesVec(vec3.xyz(0, 0, -1))
-    entityYawDegrees = (Math.atan2(entityForward.x, -entityForward.z) * 180) / Math.PI
 
     /*
      * Rotating local ENU by this lands it on the SLAM frame.
@@ -330,9 +223,7 @@ export const GpsAnchor = ecs.registerComponent({
      * therefore lands at β − θ in the SLAM frame, and we want that to be the
      * camera's SLAM yaw ψ when the compass reads β — so θ = β − ψ.
      */
-    // Only meaningful when the compass is in charge; under WALK_FIRST the
-    // heading is null and nothing below reads this.
-    const targetYaw = ((heading ?? 0) * Math.PI) / 180 - cameraYaw
+    const targetYaw = (heading * Math.PI) / 180 - cameraYaw
 
     /*
      * Only re-estimate north while the device is reasonably still.
@@ -372,10 +263,10 @@ export const GpsAnchor = ecs.registerComponent({
       aligned = true
       data.yawOffset = (RUN_HEADING * Math.PI) / 180 - cameraYaw
       data.hasYaw = true
-    } else if (!WALK_FIRST && !data.hasYaw) {
+    } else if (!data.hasYaw) {
       data.yawOffset = targetYaw
       data.hasYaw = true
-    } else if (!WALK_FIRST && !aligned && !locked && !SIMULATED && yawRate < STILL_ENOUGH) {
+    } else if (!aligned && !locked && !SIMULATED && yawRate < STILL_ENOUGH) {
       /*
        * Skipped entirely when simulating: targetYaw is β − ψ, and a stand-in
        * compass holds β constant, so every re-estimate is really just the
@@ -426,38 +317,6 @@ export const GpsAnchor = ecs.registerComponent({
     if (data.fixSeq !== seq) {
       const { east, north } = toLocalMetres(fix, target)
       const camera = w.transform.getWorldPosition(cameraEid)
-
-      /*
-       * Same fix, put to a second use: how far the viewer has moved since the
-       * session began, in both frames at once.
-       */
-      if (!walkOrigin) {
-        walkOrigin = { lat: fix.lat, lon: fix.lon, camX: camera.x, camZ: camera.z }
-      } else if (!aligned) {
-        const walked = toLocalMetres(walkOrigin, fix)
-        const overGround = Math.hypot(walked.east, walked.north)
-        const dx = camera.x - walkOrigin.camX
-        const dz = camera.z - walkOrigin.camZ
-        const throughSlam = Math.hypot(dx, dz)
-
-        /*
-         * Long enough to out-measure the fix's own error, and agreeing with
-         * what the tracker saw. A GPS jump with no matching movement in SLAM
-         * is noise, and would otherwise be read as a walk in some direction.
-         */
-        walkedNow = overGround
-        const needed = Math.max(WALK_MIN, 2 * fix.accuracy)
-        const agree = throughSlam > overGround * 0.5 && throughSlam < overGround * 2
-
-        if (overGround >= needed && agree && overGround > walkBaseline * 1.15) {
-          walkBaseline = overGround
-          walkYaw = Math.atan2(walked.east, walked.north) - Math.atan2(dx, -dz)
-          data.yawOffset = walkYaw
-          data.hasYaw = true
-          locked = true
-        }
-      }
-
       data.fixSeq = seq
       data.fixCamX = camera.x
       data.fixCamZ = camera.z
