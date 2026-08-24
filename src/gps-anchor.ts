@@ -137,9 +137,34 @@ let locked = false
  * and the walk overrules it the moment it can.
  */
 const WALK_MIN = num('walk', 12)
+
+/**
+ * Refuse to place anything until the walk has given us north.
+ *
+ * On by default, because the magnetometer has not earned the benefit of the
+ * doubt: it has put the run square to the river on this device, differently
+ * each session, and every attempt to correct its output has been a guess about
+ * a sensor that cannot be read from here. The walk estimate does not involve
+ * it, cannot be biased by steel or a phone case, and is checkable — GPS says
+ * the walk went that way, the tracker agrees it went that way, and the angle
+ * between the two answers is the only thing being asked for.
+ *
+ * The price is asking someone to take a dozen steps before the aircraft
+ * appears, which is a normal thing for a geospatial experience to ask and a
+ * great deal better than showing them a flight path at right angles to the
+ * river. `?walkfirst=0` restores the old behaviour of trusting the compass.
+ */
+const WALK_FIRST = flag('walkfirst', true) && !SIMULATED
+
+/** Metres walked so far, and how many are needed, for the message on screen. */
+export const getWalkProgress = () => ({
+  walked: walkedNow, needed: WALK_MIN, ready: walkYaw !== null, required: WALK_FIRST,
+})
 let walkOrigin: { lat: number; lon: number; camX: number; camZ: number } | null = null
 let walkBaseline = 0
 let walkYaw: number | null = null
+/** How far from the start we are right now, accepted or not, for the counter. */
+let walkedNow = 0
 
 /** What is holding the content frame, for the telemetry panel. */
 export const getFrameSource = () => {
@@ -265,14 +290,24 @@ export const GpsAnchor = ecs.registerComponent({
     const fix = getFix()
     const heading = getHeading()
 
-    // Until both sensors have reported, anything we drew would be in the
-    // wrong place — which reads to a viewer as "the AR is broken" rather than
-    // "the AR is still starting".
-    if (!fix || heading === null) {
+    /*
+     * Until we know where things are *and* which way round they go, anything
+     * drawn is in the wrong place — which reads as broken AR rather than as AR
+     * that has not started. Under WALK_FIRST that includes knowing north from
+     * the walk rather than from the magnetometer, so the aircraft waits for a
+     * dozen steps instead of appearing somewhere confidently wrong.
+     */
+    const orientedByWalk = walkYaw !== null
+    if (!fix || (WALK_FIRST ? !orientedByWalk : heading === null)) {
       entity.hide()
-      return
+      // Still run the fix bookkeeping below, or the walk can never complete.
+    } else {
+      entity.show()
     }
-    entity.show()
+
+    // A heading is still wanted for the compass bootstrap when WALK_FIRST is
+    // off; with it on, everything below simply waits for the walk.
+    if (heading === null && !WALK_FIRST) return
 
     const dt = w.time.delta / 1000
 
@@ -295,7 +330,9 @@ export const GpsAnchor = ecs.registerComponent({
      * therefore lands at β − θ in the SLAM frame, and we want that to be the
      * camera's SLAM yaw ψ when the compass reads β — so θ = β − ψ.
      */
-    const targetYaw = (heading * Math.PI) / 180 - cameraYaw
+    // Only meaningful when the compass is in charge; under WALK_FIRST the
+    // heading is null and nothing below reads this.
+    const targetYaw = ((heading ?? 0) * Math.PI) / 180 - cameraYaw
 
     /*
      * Only re-estimate north while the device is reasonably still.
@@ -335,10 +372,10 @@ export const GpsAnchor = ecs.registerComponent({
       aligned = true
       data.yawOffset = (RUN_HEADING * Math.PI) / 180 - cameraYaw
       data.hasYaw = true
-    } else if (!data.hasYaw) {
+    } else if (!WALK_FIRST && !data.hasYaw) {
       data.yawOffset = targetYaw
       data.hasYaw = true
-    } else if (!aligned && !locked && !SIMULATED && yawRate < STILL_ENOUGH) {
+    } else if (!WALK_FIRST && !aligned && !locked && !SIMULATED && yawRate < STILL_ENOUGH) {
       /*
        * Skipped entirely when simulating: targetYaw is β − ψ, and a stand-in
        * compass holds β constant, so every re-estimate is really just the
@@ -408,6 +445,7 @@ export const GpsAnchor = ecs.registerComponent({
          * what the tracker saw. A GPS jump with no matching movement in SLAM
          * is noise, and would otherwise be read as a walk in some direction.
          */
+        walkedNow = overGround
         const needed = Math.max(WALK_MIN, 2 * fix.accuracy)
         const agree = throughSlam > overGround * 0.5 && throughSlam < overGround * 2
 
