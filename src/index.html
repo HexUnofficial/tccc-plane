@@ -104,6 +104,7 @@
       translate: -50% -50%;
       display: grid;
       place-items: center;
+      gap: 0.35rem;
       opacity: 0.85;
     }
     #arrow svg {
@@ -112,6 +113,12 @@
       transition: rotate 120ms linear;
       filter: drop-shadow(0 2px 6px rgb(0 0 0 / 0.8));
     }
+    #arrow-label {
+      font-size: 0.8rem;
+      font-variant-numeric: tabular-nums;
+      text-shadow: 0 1px 4px rgb(0 0 0 / 0.9);
+    }
+
     #panel-toggle {
       position: absolute;
       right: 1rem;
@@ -209,6 +216,7 @@
 
     <div id="arrow" hidden>
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 4 20l8-5 8 5Z" fill="currentColor"/></svg>
+      <span id="arrow-label"></span>
     </div>
 
     <button id="panel-toggle" type="button" aria-label="Toggle telemetry" hidden>i</button>
