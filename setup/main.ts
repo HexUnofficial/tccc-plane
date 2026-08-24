@@ -369,6 +369,9 @@ function render() {
     '};',
     '',
     `export const FLIGHT_HEADING = ${heading.toFixed(1)};`,
+    // Belongs to the phone rather than the site, so it is only worth writing
+    // down once it is something other than zero.
+    ...(state.north !== 0 ? ['', `export const COMPASS_OFFSET = ${state.north};`] : []),
     '',
     'export const FLIGHT = {',
     `  length: ${length.toFixed(0)},`,

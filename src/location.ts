@@ -52,6 +52,20 @@ export const LOCKED = false
  */
 export const FLIGHT_HEADING = 114.5
 
+/**
+ * Degrees added to every compass reading, overridable with `?north=`.
+ *
+ * A property of the *device*, not of the site — which is why it defaults to
+ * zero and why nothing in the scene carries it. But a magnetometer that reads
+ * a quadrant out rotates the whole content frame, and on the ground that looks
+ * exactly like the run having been drawn across the river instead of along it.
+ * When a site is only ever visited with one phone, or a platform turns out to
+ * be systematically wrong, the correction has to be shippable rather than
+ * retyped into the address bar. Find it on site with `?north=`, then paste it
+ * here from the map picker's snippet.
+ */
+export const COMPASS_OFFSET = 0
+
 /** Relative-mode placement: how far away, and on what compass bearing. */
 export const RELATIVE_PLACEMENT = {
   distance: 20, // metres

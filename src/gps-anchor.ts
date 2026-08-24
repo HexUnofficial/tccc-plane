@@ -17,6 +17,19 @@ const { vec3, quat } = ecs.math
  */
 const SIMULATED = flag('sim', false)
 
+/*
+ * The two angles the whole georeference rests on, published for the telemetry
+ * panel. Between them and the compass heading, a photograph of that panel says
+ * whether a rotated flight path is a rotated *frame* — and if it is, which of
+ * the two inputs is wrong. Reasoning about it from a description could not.
+ */
+let frameYaw = 0
+let cameraYawDegrees = 0
+
+/** Degrees the content frame is rotated by, and the camera's yaw within SLAM. */
+export const getFrameYaw = () => (frameYaw * 180) / Math.PI
+export const getCameraYaw = () => cameraYawDegrees
+
 /**
  * Holds this entity at a real-world latitude and longitude, so that
  * everything parented under it is positioned in true metres of east/north.
@@ -195,6 +208,8 @@ export const GpsAnchor = ecs.registerComponent({
     }
 
     const yaw = data.yawOffset
+    frameYaw = yaw
+    cameraYawDegrees = (cameraYaw * 180) / Math.PI
 
     /*
      * 'relative' ignores the installation coordinates and drops the circuit a

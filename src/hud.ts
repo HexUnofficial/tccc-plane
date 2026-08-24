@@ -2,6 +2,7 @@ import * as ecs from '@8thwall/ecs'
 import { bearingBetween, compassPoint, destination, distanceBetween } from './geo'
 import { getError, getFix } from './gps'
 import { getHeading } from './compass'
+import { getCameraYaw, getFrameYaw } from './gps-anchor'
 import { FlightMotion } from './flight-motion'
 import { halfExtentsFor, requestedSize } from './model'
 import { modelIsInScene } from './model-ready'
@@ -373,6 +374,12 @@ ecs.registerBehavior((world) => {
    * same 114.5 as location.ts, so the two agree unless someone changes one.
    */
   setField('run', `${RUN_HEADING.toFixed(1)}° ${compassPoint(RUN_HEADING)}`)
+  // The frame: how far the content is turned, and where SLAM thinks the camera
+  // points. heading − camyaw should equal frame once it has settled; if it does
+  // and the run is still across the river, the compass reading is the thing
+  // that is wrong, not the arithmetic on it.
+  setField('frame', `${getFrameYaw().toFixed(0)}°`)
+  setField('camyaw', `${getCameraYaw().toFixed(0)}°`)
   setField('anchor', `${anchor.lat.toFixed(6)}, ${anchor.lon.toFixed(6)}`)
   setField('distance', distance === null ? '—' : formatDistance(distance))
   setField('bearing', fix

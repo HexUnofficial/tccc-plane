@@ -13,6 +13,7 @@
  */
 
 import { num } from './config'
+import { COMPASS_OFFSET } from './location'
 
 type CompassEvent = DeviceOrientationEvent & { webkitCompassHeading?: number }
 
@@ -158,7 +159,7 @@ export function simulateHeading(degrees: number) {
  * the panel's Heading with the bearing the map picker gives for the same run.
  * The difference is what goes here.
  */
-const NORTH_OFFSET = num('north', 0)
+const NORTH_OFFSET = num('north', COMPASS_OFFSET)
 
 /** Degrees clockwise from true north, or null before the first reading. */
 export function getHeading(): number | null {
