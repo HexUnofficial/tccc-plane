@@ -14,6 +14,7 @@
 
 import { num } from './config'
 import { COMPASS_OFFSET } from './location'
+import { azimuthFrom } from './orientation'
 
 type CompassEvent = DeviceOrientationEvent & { webkitCompassHeading?: number }
 
@@ -65,35 +66,38 @@ function noteReading(value: number) {
 /** Degrees the page is rotated relative to the device's natural orientation. */
 const screenAngle = () => screen.orientation?.angle ?? 0
 
+/**
+ * Both platforms end up in the same place: an absolute alpha — anticlockwise
+ * about the vertical from north — which, with beta and gamma, gives the
+ * camera's bearing however the phone is being held (see orientation.ts).
+ *
+ * iOS reports a relative alpha and a true-north compass heading separately, so
+ * the compass supplies what alpha lacks. This is what LocAR does with its
+ * `alphaOffset`, and taking the same route means the awkward cases — sideways,
+ * tilted up at the sky — are handled by the same arithmetic that worked at
+ * this site before.
+ */
 function onOrientation(event: CompassEvent) {
-  /*
-   * iOS: a true-north heading, clockwise — but in the *device's* frame, not
-   * the interface's.
-   *
-   * This used to be taken as-is, on the belief that the platform had already
-   * accounted for the screen being rotated. It has not. Turn the phone to
-   * landscape and the device frame turns with it while the camera keeps
-   * pointing the same way, so the reading moves by the same 90° the interface
-   * did — and the whole content frame rotates with it, which is an aeroplane
-   * flying across the river instead of along it.
-   *
-   * LocAR, which is what tccc-ar-test anchored with, corrects this explicitly:
-   * it offsets the heading by ∓90° for a screen angle of ±90 (see
-   * `orientationOffset` in its DeviceOrientationControls). Same correction as
-   * the alpha branch below, and a no-op in portrait, where the angle is 0.
-   */
+  const { beta, gamma } = event
+  const tilted = typeof beta === 'number' && typeof gamma === 'number'
+
   if (typeof event.webkitCompassHeading === 'number' && !Number.isNaN(event.webkitCompassHeading)) {
-    heading = (event.webkitCompassHeading + screenAngle()) % 360
+    const compass = event.webkitCompassHeading
+    heading = tilted
+      ? azimuthFrom(360 - compass, beta as number, gamma as number)
+      // No tilt to work with: assume upright and portrait, and lean on the
+      // screen angle, which is right unless the page is orientation-locked.
+      : (compass + screenAngle()) % 360
     noteReading(heading)
     return
   }
 
-  // Android and desktop: alpha counts anticlockwise from north in the
-  // device's natural orientation, so it needs inverting and un-rotating.
   // `absolute` matters — a relative-only event is referenced to wherever the
   // device happened to be, which is worse than useless for finding north.
   if (event.absolute && typeof event.alpha === 'number') {
-    heading = (360 - event.alpha + screenAngle()) % 360
+    heading = tilted
+      ? azimuthFrom(event.alpha, beta as number, gamma as number)
+      : (360 - event.alpha + screenAngle()) % 360
     noteReading(heading)
   }
 }
