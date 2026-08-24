@@ -103,8 +103,20 @@ export function createFlightPath({
         [0, 0, 0, 1],
       ]).decomposeR()
 
-      // Then roll about the nose axis, which is local Z after that basis.
-      const roll = quat.axisAngle(vec3.xyz(0, 0, bank))
+      /*
+       * Then roll about the nose axis.
+       *
+       * Local +Z is the *tail* axis, not the nose: the basis above puts
+       * −forward on +Z, so that the model's own +Z nose comes back round to
+       * the direction of travel via the 180° Yaw node in the scene graph. A
+       * right-handed roll of θ about local +Z is therefore a roll of −θ about
+       * the nose, and `bank` is a bank angle about the nose — positive being
+       * right wing up, out of the atan2 against gravity below.
+       *
+       * Rolling by +bank here banked the aircraft *out* of every turn: it
+       * flew the racetrack's left-hand turns with the right wing dropped.
+       */
+      const roll = quat.axisAngle(vec3.xyz(0, 0, -bank))
       entity.set(ecs.Quaternion, orientation.times(roll))
     },
   }
