@@ -144,6 +144,25 @@
       text-shadow: 0 1px 4px rgb(0 0 0 / 0.9);
     }
 
+    /* Sits above the thumb, wide enough to hit without looking, and only ever
+       present when ?align=1 put it there. */
+    #align {
+      position: absolute;
+      left: 50%;
+      translate: -50%;
+      bottom: max(4.5rem, calc(env(safe-area-inset-bottom) + 4rem));
+      padding: 0.75rem 1.4rem;
+      border-radius: 999px;
+      border: 1px solid rgb(255 255 255 / 0.35);
+      background: #F40000;
+      color: #fff;
+      font-size: 0.9rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      pointer-events: auto;
+      box-shadow: 0 8px 24px rgb(0 0 0 / 0.4);
+    }
+
     #panel-toggle {
       position: absolute;
       right: 1rem;
@@ -269,6 +288,8 @@
       <span id="arrow-label"></span>
     </div>
 
+    <button id="align" type="button" hidden>Align to the run</button>
+
     <button id="panel-toggle" type="button" aria-label="Toggle telemetry" hidden>i</button>
 
     <dl id="panel" hidden>
@@ -277,6 +298,7 @@
       <dt>Heading</dt><dd id="f-heading">—</dd>
       <dt>Run</dt><dd id="f-run">—</dd>
       <dt>Link</dt><dd id="f-link">—</dd>
+      <dt>Frame by</dt><dd id="f-frameby">—</dd>
       <dt>Frame</dt><dd id="f-frame">—</dd>
       <dt>Cam yaw</dt><dd id="f-camyaw">—</dd>
       <dt>Anchor</dt><dd id="f-anchor">—</dd>

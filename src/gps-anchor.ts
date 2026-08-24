@@ -4,8 +4,11 @@ import { startGps, getFix, getFixSeq, simulateFix, toLocalMetres } from './gps'
 import { bearingBetween, destination } from './geo'
 import { flag, num, placed, placedNum } from './config'
 import {
-  DEFAULT_MODE, INSTALLATION, RELATIVE_PLACEMENT, VIEW_FROM,
+  DEFAULT_MODE, FLIGHT_HEADING, INSTALLATION, RELATIVE_PLACEMENT, VIEW_FROM,
 } from './location'
+
+/** The bearing the circuit is flown on, resolved as flight-motion resolves it. */
+const RUN_HEADING = placedNum('heading', FLIGHT_HEADING)
 
 const { vec3, quat } = ecs.math
 
@@ -25,6 +28,34 @@ const SIMULATED = flag('sim', false)
  */
 let frameYaw = 0
 let cameraYawDegrees = 0
+
+/*
+ * ── ALIGNING BY HAND ──────────────────────────────────────────────────────
+ *
+ * Every sensor in this chain can be wrong in a way that cannot be detected
+ * from inside: a magnetometer near steel, a platform reporting a heading in a
+ * frame that is not the one documented, a tracker whose world yaw jumps with
+ * the screen orientation. The symptom is always the same — the run sits at a
+ * right angle to the river it was drawn on — and no amount of arithmetic on
+ * bad input recovers it.
+ *
+ * A person standing at the site can see the river. Pointing the phone along
+ * it and tapping says, in one gesture, "whatever your instruments claim, this
+ * is where the run goes", and the frame is set from that: the direction the
+ * camera faces *becomes* the circuit's heading. It needs no calibration, no
+ * reload, and it cannot be wrong in a way the person holding it cannot see.
+ *
+ * Afterwards the compass is left to its own devices — re-estimating from it
+ * would drag the frame back to the reading that was wrong in the first place.
+ */
+let alignRequested = false
+let aligned = false
+
+/** Take the run's bearing from where the camera is pointing, once. */
+export const alignRunWithCamera = () => { alignRequested = true }
+
+/** Whether the frame is currently held by hand rather than by the compass. */
+export const isAligned = () => aligned
 
 /** Degrees the content frame is rotated by, and the camera's yaw within SLAM. */
 export const getFrameYaw = () => (frameYaw * 180) / Math.PI
@@ -187,10 +218,20 @@ export const GpsAnchor = ecs.registerComponent({
 
     const STILL_ENOUGH = (25 * Math.PI) / 180 // radians per second
 
-    if (!data.hasYaw) {
+    if (alignRequested) {
+      /*
+       * The camera is pointing along the run, so the run's bearing has to come
+       * out where the camera is looking: content at RUN_HEADING must land at
+       * SLAM angle cameraYaw, and content at bearing b lands at b − yaw.
+       */
+      alignRequested = false
+      aligned = true
+      data.yawOffset = (RUN_HEADING * Math.PI) / 180 - cameraYaw
+      data.hasYaw = true
+    } else if (!data.hasYaw) {
       data.yawOffset = targetYaw
       data.hasYaw = true
-    } else if (!SIMULATED && yawRate < STILL_ENOUGH) {
+    } else if (!aligned && !SIMULATED && yawRate < STILL_ENOUGH) {
       /*
        * Skipped entirely when simulating: targetYaw is β − ψ, and a stand-in
        * compass holds β constant, so every re-estimate is really just the

@@ -2,12 +2,12 @@ import * as ecs from '@8thwall/ecs'
 import { bearingBetween, compassPoint, destination, distanceBetween } from './geo'
 import { getError, getFix } from './gps'
 import { getCompassState, getHeading } from './compass'
-import { getCameraYaw, getFrameYaw } from './gps-anchor'
+import { alignRunWithCamera, getCameraYaw, getFrameYaw, isAligned } from './gps-anchor'
 import { FlightMotion } from './flight-motion'
 import { halfExtentsFor, requestedSize } from './model'
 import { modelIsInScene } from './model-ready'
 import { DEFAULT_MODE, FLIGHT_HEADING, INSTALLATION, RELATIVE_PLACEMENT } from './location'
-import { linkIgnored, num, params, placed, placedNum } from './config'
+import { flag, linkIgnored, num, params, placed, placedNum } from './config'
 
 /**
  * How much interface to draw over the camera feed, matching tccc-ar-test:
@@ -117,6 +117,22 @@ let chromeWired = false
 function wireChrome() {
   if (chromeWired) return
   chromeWired = true
+
+  /*
+   * Hidden unless asked for with `?align=1`. It is a repair tool for someone
+   * standing at the site who can see that the run is wrong, not something a
+   * member of the public should be handed a chance to press.
+   */
+  const align = el('align')
+  if (align) {
+    align.hidden = !flag('align', false)
+    align.addEventListener('click', () => {
+      alignRunWithCamera()
+      align.textContent = 'Aligned'
+      setTimeout(() => { align.textContent = 'Align to the run' }, 1400)
+    })
+  }
+
   const toggle = el('panel-toggle')
   const panel = el('panel')
   if (!toggle || !panel) return
@@ -381,6 +397,7 @@ ecs.registerBehavior((world) => {
   // Which numbers are in force. A link whose settings were discarded looks
   // identical to one that was obeyed, until you read this.
   setField('link', linkIgnored() ? 'ignored — using shipped' : 'honoured')
+  setField('frameby', isAligned() ? 'aligned by hand' : 'compass')
   // The frame: how far the content is turned, and where SLAM thinks the camera
   // points. heading − camyaw should equal frame once it has settled; if it does
   // and the run is still across the river, the compass reading is the thing
