@@ -12,6 +12,8 @@
  * calibrated by waving a figure-eight.
  */
 
+import { num } from './config'
+
 type CompassEvent = DeviceOrientationEvent & { webkitCompassHeading?: number }
 
 let heading: number | null = null
@@ -21,10 +23,24 @@ let started = false
 const screenAngle = () => screen.orientation?.angle ?? 0
 
 function onOrientation(event: CompassEvent) {
-  // iOS: a true-north heading, clockwise, already corrected for screen
-  // orientation by the platform.
+  /*
+   * iOS: a true-north heading, clockwise — but in the *device's* frame, not
+   * the interface's.
+   *
+   * This used to be taken as-is, on the belief that the platform had already
+   * accounted for the screen being rotated. It has not. Turn the phone to
+   * landscape and the device frame turns with it while the camera keeps
+   * pointing the same way, so the reading moves by the same 90° the interface
+   * did — and the whole content frame rotates with it, which is an aeroplane
+   * flying across the river instead of along it.
+   *
+   * LocAR, which is what tccc-ar-test anchored with, corrects this explicitly:
+   * it offsets the heading by ∓90° for a screen angle of ±90 (see
+   * `orientationOffset` in its DeviceOrientationControls). Same correction as
+   * the alpha branch below, and a no-op in portrait, where the angle is 0.
+   */
   if (typeof event.webkitCompassHeading === 'number' && !Number.isNaN(event.webkitCompassHeading)) {
-    heading = event.webkitCompassHeading
+    heading = (event.webkitCompassHeading + screenAngle()) % 360
     return
   }
 
@@ -82,7 +98,24 @@ export function simulateHeading(degrees: number) {
   started = true
 }
 
+/**
+ * A fixed correction added to every reading, from `?north=`.
+ *
+ * The magnetometer is the one part of this that cannot be verified from a
+ * desk, and it is wrong in whole quadrants on some devices — held in
+ * landscape, or with a case containing a magnet, or simply uncalibrated. When
+ * the entire circuit sits at right angles to the river it is in, that is this
+ * number, and waiting for a redeploy to test a guess at it is no way to spend
+ * a site visit.
+ *
+ * To find it: open with `?ui=debug`, stand facing along the run, and compare
+ * the panel's Heading with the bearing the map picker gives for the same run.
+ * The difference is what goes here.
+ */
+const NORTH_OFFSET = num('north', 0)
+
 /** Degrees clockwise from true north, or null before the first reading. */
 export function getHeading(): number | null {
-  return heading
+  if (heading === null) return null
+  return (((heading + NORTH_OFFSET) % 360) + 360) % 360
 }

@@ -1,5 +1,6 @@
 import * as ecs from '@8thwall/ecs'
 import { requestCompassPermission } from './compass'
+import { modelIsInScene } from './model-ready'
 
 /**
  * The branded splash, and the single tap that gets us into AR.
@@ -31,12 +32,20 @@ function requestFullscreen() {
   })
 }
 
-/** Longest we will hold someone at the gate waiting for the model. */
-const READY_TIMEOUT_MS = 6000
+/**
+ * How long before the wait is worth explaining rather than just enduring.
+ *
+ * Not a timeout: nobody is let through until the aircraft is here. Starting
+ * without it puts someone in a live camera feed with an arrow pointing at an
+ * empty sky, which reads as broken AR — and it is the aircraft they came for,
+ * so there is nothing to be early for. The GLB is a ten megabyte download with
+ * nine megabytes of texture in it, which on mobile data at a riverbank is a
+ * genuine wait, so say that instead of appearing to hang.
+ */
+const SLOW_MS = 8000
 
 let wired = false
 let unlocked = false
-let modelReady = false
 
 function wire(world: ecs.World) {
   if (wired) return
@@ -46,10 +55,6 @@ function wire(world: ecs.World) {
   const button = el<HTMLButtonElement>('gate-start')
   const message = el('gate-message')
   if (!gate || !button || !message) return
-
-  world.events.addListener(world.events.globalId, ecs.events.GLTF_MODEL_LOADED, () => {
-    modelReady = true
-  })
 
   button.addEventListener('click', () => {
     button.disabled = true
@@ -73,8 +78,9 @@ function wire(world: ecs.World) {
  * once the camera pipeline is up — by which point REALITY_READY may already
  * have been dispatched. A listener registered here would miss it and strand
  * the button disabled. That the behavior is running at all *is* the signal
- * that reality is ready, so the only thing left to wait on is the model, and
- * even that gives up after a few seconds rather than locking anyone out.
+ * that reality is ready, so the only thing left to wait on is the model —
+ * which is asked of the scene graph rather than of an event, for exactly the
+ * same reason (see model-ready.ts).
  */
 ecs.registerBehavior((world) => {
   wire(world)
@@ -84,8 +90,10 @@ ecs.registerBehavior((world) => {
   const message = el('gate-message')
   if (!button || !message) return
 
-  if (!modelReady && world.time.elapsed < READY_TIMEOUT_MS) {
-    message.textContent = 'Loading model…'
+  if (!modelIsInScene(world)) {
+    message.textContent = world.time.elapsed > SLOW_MS
+      ? 'Still loading the aircraft — it is a large model.'
+      : 'Loading the aircraft…'
     return
   }
 

@@ -4,6 +4,7 @@ import { getError, getFix } from './gps'
 import { getHeading } from './compass'
 import { FlightMotion } from './flight-motion'
 import { halfExtentsFor, requestedSize } from './model'
+import { modelIsInScene } from './model-ready'
 import { DEFAULT_MODE, INSTALLATION, RELATIVE_PLACEMENT } from './location'
 import { num, params, placed, placedNum } from './config'
 
@@ -159,6 +160,9 @@ ecs.registerBehavior((world) => {
    */
   const tooFar = !relative && distance !== null && distance > FAR_WARNING
 
+  const motionEids = motionQuery(world)
+  const modelInScene = modelIsInScene(world)
+
   let text = ''
   let tone = 'neutral'
   const gpsError = getError()
@@ -171,6 +175,11 @@ ecs.registerBehavior((world) => {
   } else if (heading === null) {
     text = 'Waiting for the compass — wave the phone in a figure-eight.'
     tone = 'warn'
+  } else if (!modelInScene) {
+    // Ten megabytes of aeroplane over mobile data outlasts the gate's own
+    // six-second timeout, so this is a normal state, not a broken one.
+    text = 'Loading the aircraft…'
+    tone = 'warn'
   } else if (tooFar) {
     text = `${formatDistance(distance!)} from the installation — you are not at the site.`
     tone = 'warn'
@@ -180,11 +189,20 @@ ecs.registerBehavior((world) => {
   setStatus(ui === 'debug' || (ui === 'minimal' && worthInterrupting) ? text : '', tone)
 
   // --- Where the aircraft is, and how big it looks from here ---------------
-  const motionEids = motionQuery(world)
   const camera = world.three.activeCamera as unknown as Cam | undefined
   let subject: { range: number; pixels: number } | null = null
 
-  if (motionEids.length > 0 && camera && fix && heading !== null) {
+  /*
+   * `modelInScene` gates all of this, the arrow above all.
+   *
+   * The Motion entity exists from the first frame whether or not the GLB has
+   * arrived, so without this the arrow spent the first several seconds
+   * pointing, with total confidence, at an aeroplane that was still
+   * downloading — and swinging as it flew its circuit invisibly. An arrow that
+   * points at nothing is worse than no arrow: it is the one part of this that
+   * a viewer has no way to check.
+   */
+  if (modelInScene && motionEids.length > 0 && camera && fix && heading !== null) {
     const eid = motionEids[0]
     const centre = world.transform.getWorldPosition(eid)
     const rotation = world.transform.getWorldQuaternion(eid)

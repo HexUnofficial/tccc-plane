@@ -436,13 +436,20 @@ el('watchable').addEventListener('click', () => {
 })
 
 /**
- * The deployed circuit, put back exactly — around wherever the pins are now.
+ * The deployed circuit, put back around wherever the pins are now.
  *
  * Deliberately not a jump back to the installation's coordinates: the path and
  * the place are separate decisions, and testing means taking the real circuit
  * somewhere you can stand. Restoring the location too would undo that every
  * time you wanted the shipped numbers back. The site itself is a paste away —
  * its coordinates are the placeholder in "Jump to coordinates".
+ *
+ * The bearing is the one number that does *not* come back with the rest.
+ * FLIGHT_HEADING is 114.5° because that is where the Thames runs at Blackfriars
+ * and nowhere else; applying it to a run drawn along a different river turns
+ * the circuit across the water rather than along it — which on site looks
+ * exactly like the compass being wrong, and is impossible to tell apart from
+ * it. Whatever the pins are pointing at is the bearing that survives.
  */
 el('deployed').addEventListener('click', () => {
   state.turnRadius = FLIGHT.turnRadius
@@ -452,8 +459,9 @@ el('deployed').addEventListener('click', () => {
   state.viewer = 200
 
   const centre = runCentre()
-  state.a = destination(centre, (FLIGHT_HEADING + 180) % 360, FLIGHT.length / 2)
-  state.b = destination(centre, FLIGHT_HEADING, FLIGHT.length / 2)
+  const heading = runHeading()
+  state.a = destination(centre, (heading + 180) % 360, FLIGHT.length / 2)
+  state.b = destination(centre, heading, FLIGHT.length / 2)
   startPin.setLatLng([state.a.lat, state.a.lon])
   endPin.setLatLng([state.b.lat, state.b.lon])
   // A 2.5 km run does not fit the frame a 100 m one was drawn at.

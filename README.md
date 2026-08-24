@@ -124,6 +124,7 @@ field without republishing — same idea as the original.
 | `avg` | Fixes averaged together to suppress wander |
 | `smooth` | Seconds to ease to a corrected GPS position |
 | `smoothrot` | Seconds for the heading estimate to settle |
+| `north` | Degrees added to every compass reading, to dial out a device that is wrong |
 | `size` | Overall assembly length in metres (aircraft, tow line and banner) |
 | `mode` | `relative` drops the circuit near you instead of at the site |
 | `bearing`, `distance` | Relative mode: which way, and how far |
