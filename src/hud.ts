@@ -2,7 +2,9 @@ import * as ecs from '@8thwall/ecs'
 import { bearingBetween, compassPoint, destination, distanceBetween } from './geo'
 import { getError, getFix } from './gps'
 import { getCompassState, getHeading } from './compass'
-import { alignRunWithCamera, getCameraYaw, getFrameSource, getFrameYaw } from './gps-anchor'
+import {
+  alignRunWithCamera, getCameraYaw, getEntityYaw, getFrameSource, getFrameYaw,
+} from './gps-anchor'
 import { FlightMotion } from './flight-motion'
 import { halfExtentsFor, requestedSize } from './model'
 import { modelIsInScene } from './model-ready'
@@ -404,6 +406,8 @@ ecs.registerBehavior((world) => {
   // that is wrong, not the arithmetic on it.
   setField('frame', `${getFrameYaw().toFixed(0)}°`)
   setField('camyaw', `${getCameraYaw().toFixed(0)}°`)
+  // Should match the row above. A right angle between them is the fault.
+  setField('entyaw', `${getEntityYaw().toFixed(0)}°`)
   setField('anchor', `${anchor.lat.toFixed(6)}, ${anchor.lon.toFixed(6)}`)
   setField('distance', distance === null ? '—' : formatDistance(distance))
   setField('bearing', fix
