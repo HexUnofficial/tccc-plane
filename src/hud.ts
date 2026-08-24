@@ -5,7 +5,7 @@ import { getHeading } from './compass'
 import { FlightMotion } from './flight-motion'
 import { halfExtentsFor, requestedSize } from './model'
 import { modelIsInScene } from './model-ready'
-import { DEFAULT_MODE, INSTALLATION, RELATIVE_PLACEMENT } from './location'
+import { DEFAULT_MODE, FLIGHT_HEADING, INSTALLATION, RELATIVE_PLACEMENT } from './location'
 import { num, params, placed, placedNum } from './config'
 
 /**
@@ -40,6 +40,8 @@ export const formatDistance = (m: number) =>
  * centre made the arrow appear while the aircraft was still plainly in view.
  * Shared with model-scale.ts so `?size=` moves both the model and this box.
  */
+const RUN_HEADING = num('heading', FLIGHT_HEADING)
+
 const SIZE = requestedSize()
 const HALF = halfExtentsFor(SIZE)
 
@@ -340,6 +342,19 @@ ecs.registerBehavior((world) => {
   setField('fix', fix ? `${fix.lat.toFixed(6)}, ${fix.lon.toFixed(6)}` : '—')
   setField('accuracy', fix ? `±${fix.accuracy.toFixed(0)} m` : '—')
   setField('heading', heading === null ? '—' : `${heading.toFixed(0)}° ${compassPoint(heading)}`)
+  /*
+   * The bearing the circuit is actually flown on, which is a different
+   * question from which way the compass thinks north is — and the one to
+   * check first when the run looks rotated. If this does not match the
+   * heading the map picker shows for the same pins, the link is stale and no
+   * amount of compass correction will fix it; if it matches and the aircraft
+   * still flies across the river, then it is the compass.
+   *
+   * Resolved the way flight-motion resolves it, minus the scene parameter it
+   * cannot see: URL first, then the shipped default. .expanse.json holds the
+   * same 114.5 as location.ts, so the two agree unless someone changes one.
+   */
+  setField('run', `${RUN_HEADING.toFixed(1)}° ${compassPoint(RUN_HEADING)}`)
   setField('anchor', `${anchor.lat.toFixed(6)}, ${anchor.lon.toFixed(6)}`)
   setField('distance', distance === null ? '—' : formatDistance(distance))
   setField('bearing', fix

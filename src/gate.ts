@@ -47,9 +47,32 @@ const SLOW_MS = 8000
 let wired = false
 let unlocked = false
 
+/**
+ * The credit's mark, or the word, or nothing at all.
+ *
+ * An <img> whose file is missing renders as a broken-image icon, which on a
+ * branded splash in front of an audience is worse than no credit — and this
+ * asset is supplied separately from the code. Falling back to the word keeps
+ * the line reading correctly either way.
+ */
+function wireCredit() {
+  const logo = el<HTMLImageElement>('gate-hex')
+  if (!logo) return
+  logo.addEventListener('error', () => {
+    logo.replaceWith(document.createTextNode(logo.alt || 'HEX'))
+  })
+  // A cached failure can land before the listener does; `complete` with no
+  // intrinsic width is how a browser reports exactly that.
+  if (logo.complete && logo.naturalWidth === 0) {
+    logo.replaceWith(document.createTextNode(logo.alt || 'HEX'))
+  }
+}
+
 function wire(world: ecs.World) {
   if (wired) return
   wired = true
+
+  wireCredit()
 
   const gate = el('gate')
   const button = el<HTMLButtonElement>('gate-start')
