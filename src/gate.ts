@@ -1,6 +1,6 @@
 import * as ecs from '@8thwall/ecs'
 import { requestCompassPermission } from './compass'
-import { modelIsInScene } from './model-ready'
+import { modelIsInScene, modelParts } from './model-ready'
 
 /**
  * The branded splash, and the single tap that gets us into AR.
@@ -44,28 +44,51 @@ function requestFullscreen() {
  */
 const SLOW_MS = 8000
 
+/** And past this it is worth suggesting the connection is the problem. */
+const STUCK_MS = 30000
+
 let wired = false
 let unlocked = false
 
 /**
- * The credit's mark, or the word, or nothing at all.
+ * Whatever the mark was saved as, in order of preference.
+ *
+ * Tried in turn rather than hard-coding one, so putting the artwork in the
+ * project is dropping a file into src/assets/brand and nothing else — no
+ * matching edit here to remember, and no build change: everything under
+ * src/assets is copied as-is.
+ */
+const CREDIT_SOURCES = [
+  './assets/brand/hex.svg',
+  './assets/brand/hex.png',
+  './assets/brand/hex.webp',
+]
+
+/**
+ * The credit's mark, or failing that the word.
  *
  * An <img> whose file is missing renders as a broken-image icon, which on a
- * branded splash in front of an audience is worse than no credit — and this
- * asset is supplied separately from the code. Falling back to the word keeps
- * the line reading correctly either way.
+ * branded splash in front of an audience is worse than no credit at all. The
+ * alt text is the fallback, so the line reads "by HEX" either way.
  */
 function wireCredit() {
   const logo = el<HTMLImageElement>('gate-hex')
   if (!logo) return
-  logo.addEventListener('error', () => {
-    logo.replaceWith(document.createTextNode(logo.alt || 'HEX'))
-  })
-  // A cached failure can land before the listener does; `complete` with no
-  // intrinsic width is how a browser reports exactly that.
-  if (logo.complete && logo.naturalWidth === 0) {
+
+  let attempt = 0
+  const next = () => {
+    attempt += 1
+    if (attempt < CREDIT_SOURCES.length) {
+      logo.src = CREDIT_SOURCES[attempt]
+      return
+    }
     logo.replaceWith(document.createTextNode(logo.alt || 'HEX'))
   }
+
+  logo.addEventListener('error', next)
+  // A cached failure can land before the listener does; `complete` with no
+  // intrinsic width is how a browser reports exactly that.
+  if (logo.complete && logo.naturalWidth === 0) next()
 }
 
 function wire(world: ecs.World) {
@@ -114,9 +137,25 @@ ecs.registerBehavior((world) => {
   if (!button || !message) return
 
   if (!modelIsInScene(world)) {
-    message.textContent = world.time.elapsed > SLOW_MS
-      ? 'Still loading the aircraft — it is a large model.'
-      : 'Loading the aircraft…'
+    /*
+     * Still no timeout, on purpose. But a splash that says the same three
+     * words for a minute is indistinguishable from a hung one, so as the wait
+     * grows the message says more — including how many pieces of the model
+     * have arrived, which is what separates "slow" from "stopped".
+     */
+    const waited = world.time.elapsed
+    const parts = modelParts()
+    if (waited > STUCK_MS) {
+      message.textContent = parts > 0
+        ? `Still loading — ${parts} parts of the aircraft so far. A better signal will help.`
+        : 'The aircraft is not downloading. Check your connection and reload.'
+    } else if (waited > SLOW_MS) {
+      message.textContent = parts > 0
+        ? `Still loading the aircraft — ${parts} parts so far.`
+        : 'Still loading the aircraft — it is a large model.'
+    } else {
+      message.textContent = 'Loading the aircraft…'
+    }
     return
   }
 
