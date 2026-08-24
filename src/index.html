@@ -189,22 +189,29 @@
      * carries the paragraph gap for the pair. Both selectors have to out-weigh
      * `.gate-card p`, which is more specific than a bare class on its own.
      */
-    .gate-card .gate-tagline { margin-bottom: 0.4rem; }
+    .gate-card .gate-tagline { margin-bottom: 0.6rem; }
     .gate-card .gate-credit {
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 0.45em;
-      margin: 0 0 1.25rem;
+      gap: 0.5rem;
+      margin: 0 0 1.4rem;
       font-size: 0.72rem;
       letter-spacing: 0.06em;
-      opacity: 0.7;
     }
-    /* Sized off the line's own font, so the pair scales together. */
+    /* Only the word is held back; the mark stays full white, because it is
+       drawn in hairlines and dimming it costs more contrast than it can
+       spare against the red. */
+    .gate-card .gate-credit span { opacity: 0.7; }
+    /*
+     * A fixed height, not an em multiple: the mark is a 12x6 grid of outlined
+     * cells, and under ~40px its counters close up and it stops reading. See
+     * the note in hex.svg.
+     */
     .gate-card .gate-credit img {
       display: block;
       width: auto;
-      height: 1.5em;
+      height: 2.6rem;
     }
 
     #gate-start {
@@ -260,7 +267,7 @@
         <img src="./assets/brand/title.svg" alt="next stop, SHANGHAI!" width="1405" height="538">
       </h1>
       <p class="gate-tagline">Best now, better forever.</p>
-      <p class="gate-credit">by <img src="./assets/brand/hex.svg" alt="hex" width="180" height="56"></p>
+      <p class="gate-credit"><span>by</span> <img src="./assets/brand/hex.svg" alt="hex" width="618" height="312"></p>
       <p>Point your phone at the world around you. We need your camera, location and motion sensors.</p>
       <button id="gate-start" type="button" disabled>Start AR</button>
       <p id="gate-message">Starting…</p>

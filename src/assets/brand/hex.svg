@@ -1,18 +1,23 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  hex — the credit mark on the gate. Drawn as one monoline system: the
-  hexagon and the letterforms share a stroke weight, so it stays legible
-  once it is scaled down to a line of small print. White, because the only
-  place it is shown is the red gate; swap the stroke if that changes.
+  The hex logo, traced from the reference supplied by design.
+
+  It is a modular mark on a 12x6 grid of 51-unit cells: every stroke in the
+  reference lands exactly on that grid, and this reproduces the drawing
+  segment for segment. The viewBox is inset by half a stroke so the outer
+  edges are not clipped.
+
+  Drawn as outlines, like the reference. Two consequences worth knowing:
+  the stroke is a fixed width in user units, so it thickens as the mark is
+  scaled down; and below roughly 40px tall the counters close up and it
+  stops reading. Do not use it smaller than that without a solid version.
 -->
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 56" width="180" height="56"
-     fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
-  <!-- Pointy-top hexagon, sized to the wordmark's ascender and baseline. -->
-  <path d="M25.5 6.5 44.12 17.25 44.12 38.75 25.5 49.5 6.88 38.75 6.88 17.25Z"/>
-  <!-- h: stem, then a half-circle shoulder onto the second stem. -->
-  <path d="M71 6.5V49.5M71 33A11 11 0 0 1 93 33V49.5"/>
-  <!-- e: the crossbar runs the full width, and the bowl opens below right. -->
-  <path d="M109 35.75H136.5A13.75 13.75 0 1 0 133.28 44.59"/>
-  <!-- x -->
-  <path d="M152.5 22 172.5 49.5M172.5 22 152.5 49.5"/>
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="-3 -3 618 312" width="618" height="312">
+  <g fill="none" stroke="#fff" stroke-width="6">
+    <!-- verticals -->
+    <path d="M0 51V306 M51 51V153 M51 204V306 M153 102V153 M153 204V306 M204 51V306 M255 51V306 M306 51V153 M306 204V255 M408 0V204 M408 255V306 M459 0V204 M510 0V204 M561 0V204 M612 51V102 M612 153V204"/>
+    <!-- horizontals -->
+    <path d="M0 51H51 M204 51H255 M306 51H612 M153 102H612 M51 153H153 M306 153H612 M51 204H153 M306 204H408 M459 204H510 M561 204H612 M306 255H408 M0 306H51 M153 306H204 M255 306H408"/>
+  </g>
 </svg>
