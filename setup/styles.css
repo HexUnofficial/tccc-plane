@@ -63,3 +63,5 @@ code { font-family: ui-monospace, Consolas, monospace; font-size: .95em; }
 #pass[data-quality="rough"] { color: #f0883e; }
 #pass[data-quality="bad"] { color: #f85149; }
 #too-big { color: #f85149; }
+
+#shape { color: #f0883e; }

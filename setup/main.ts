@@ -239,6 +239,26 @@ function render() {
   el('pass').dataset.quality = pass.rate > 40 ? 'bad' : pass.rate > 20 ? 'rough' : 'ok'
 
   /*
+   * A circuit whose turns dominate does not read as a run along anything.
+   *
+   * The two legs sit 2 x turnRadius apart, and each turn is pi x turnRadius of
+   * arc. Leave the deployed 55 m turn on a 100 m run and the aircraft spends
+   * 63% of the lap turning, in circles 110 m across at either end of a 100 m
+   * straight — which from the ground looks like an aeroplane going round and
+   * round, not one beating up and down a river, and can read as the whole path
+   * being rotated.
+   */
+  const turning = Math.PI * state.turnRadius
+  el('shape').hidden = turning <= length
+  if (!el('shape').hidden) {
+    el('shape').innerHTML = `Each turn is <b>${turning.toFixed(0)} m</b> of arc against a `
+      + `<b>${length.toFixed(0)} m</b> straight, and the legs sit `
+      + `<b>${(state.turnRadius * 2).toFixed(0)} m</b> apart. More of the lap is spent `
+      + 'turning than running, so it will not read as flying along the line you have '
+      + 'drawn. Drop the turn radius.'
+  }
+
+  /*
    * A 400 m assembly on a 100 m leg is not a small aeroplane on a short
    * circuit — it is an aeroplane four times longer than the run it is flying
    * along, so the nose reaches the far turn while the banner is still coming
