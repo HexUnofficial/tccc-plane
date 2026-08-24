@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  hex — the credit mark on the gate. Drawn as one monoline system: the
+  hexagon and the letterforms share a stroke weight, so it stays legible
+  once it is scaled down to a line of small print. White, because the only
+  place it is shown is the red gate; swap the stroke if that changes.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 56" width="180" height="56"
+     fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Pointy-top hexagon, sized to the wordmark's ascender and baseline. -->
+  <path d="M25.5 6.5 44.12 17.25 44.12 38.75 25.5 49.5 6.88 38.75 6.88 17.25Z"/>
+  <!-- h: stem, then a half-circle shoulder onto the second stem. -->
+  <path d="M71 6.5V49.5M71 33A11 11 0 0 1 93 33V49.5"/>
+  <!-- e: the crossbar runs the full width, and the bowl opens below right. -->
+  <path d="M109 35.75H136.5A13.75 13.75 0 1 0 133.28 44.59"/>
+  <!-- x -->
+  <path d="M152.5 22 172.5 49.5M172.5 22 152.5 49.5"/>
+</svg>

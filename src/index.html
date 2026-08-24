@@ -184,6 +184,29 @@
     .gate-tagline { margin: 1rem 0 1.1rem; font-size: 0.85rem; font-style: italic; opacity: 0.9; }
     .gate-card p { margin: 0 0 1.25rem; font-size: 0.9rem; line-height: 1.5; opacity: 0.85; }
 
+    /*
+     * The credit belongs to the tagline above it, so it is pulled up close and
+     * carries the paragraph gap for the pair. Both selectors have to out-weigh
+     * `.gate-card p`, which is more specific than a bare class on its own.
+     */
+    .gate-card .gate-tagline { margin-bottom: 0.4rem; }
+    .gate-card .gate-credit {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.45em;
+      margin: 0 0 1.25rem;
+      font-size: 0.72rem;
+      letter-spacing: 0.06em;
+      opacity: 0.7;
+    }
+    /* Sized off the line's own font, so the pair scales together. */
+    .gate-card .gate-credit img {
+      display: block;
+      width: auto;
+      height: 1.5em;
+    }
+
     #gate-start {
       width: 100%;
       padding: 0.9rem;
@@ -237,6 +260,7 @@
         <img src="./assets/brand/title.svg" alt="next stop, SHANGHAI!" width="1405" height="538">
       </h1>
       <p class="gate-tagline">Best now, better forever.</p>
+      <p class="gate-credit">by <img src="./assets/brand/hex.svg" alt="hex" width="180" height="56"></p>
       <p>Point your phone at the world around you. We need your camera, location and motion sensors.</p>
       <button id="gate-start" type="button" disabled>Start AR</button>
       <p id="gate-message">Starting…</p>
