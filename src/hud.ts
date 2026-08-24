@@ -2,7 +2,7 @@ import * as ecs from '@8thwall/ecs'
 import { bearingBetween, compassPoint, destination, distanceBetween } from './geo'
 import { getError, getFix } from './gps'
 import { getCompassState, getHeading } from './compass'
-import { alignRunWithCamera, getCameraYaw, getFrameYaw, isAligned } from './gps-anchor'
+import { alignRunWithCamera, getCameraYaw, getFrameSource, getFrameYaw } from './gps-anchor'
 import { FlightMotion } from './flight-motion'
 import { halfExtentsFor, requestedSize } from './model'
 import { modelIsInScene } from './model-ready'
@@ -397,7 +397,7 @@ ecs.registerBehavior((world) => {
   // Which numbers are in force. A link whose settings were discarded looks
   // identical to one that was obeyed, until you read this.
   setField('link', linkIgnored() ? 'ignored — using shipped' : 'honoured')
-  setField('frameby', isAligned() ? 'aligned by hand' : 'compass')
+  setField('frameby', getFrameSource())
   // The frame: how far the content is turned, and where SLAM thinks the camera
   // points. heading − camyaw should equal frame once it has settled; if it does
   // and the run is still across the river, the compass reading is the thing

@@ -51,6 +51,37 @@ let cameraYawDegrees = 0
 let alignRequested = false
 let aligned = false
 
+/*
+ * ── THE COMPASS IS A STARTING GUN, NOT A STEERING WHEEL ────────────────────
+ *
+ * The offset between true north and the tracker's world is a *constant*: it
+ * is a property of where the session began, and it cannot change while the
+ * session runs. The compass is only a way of measuring it once.
+ *
+ * This used to keep re-measuring it for the whole session, on the reasoning
+ * that averaging more readings gives a better estimate. That is true of a
+ * sensor whose error is noise. A magnetometer's error is not noise — it is
+ * bias, from whatever steel, wiring or magnets happen to be nearby, and it
+ * changes as the person carrying it walks around. So the frame kept being
+ * dragged towards each new reading, the flight path turned with it, and it did
+ * so differently for every phone and every visit.
+ *
+ * Now the estimate runs for a few seconds, to average out the genuine noise
+ * while the person is still getting their bearings, and then the frame is
+ * locked and the tracker carries it. SLAM is far better at holding an
+ * orientation over minutes than a compass is, which is the whole reason it is
+ * underneath. `?lock=0` restores the old behaviour; `?lock=` sets the seconds.
+ */
+const LOCK_MS = num('lock', 6) * 1000
+let firstHeadingAt = 0
+let locked = false
+
+/** What is holding the content frame, for the telemetry panel. */
+export const getFrameSource = () => {
+  if (aligned) return 'aligned by hand'
+  return locked ? 'compass, locked' : 'compass, settling'
+}
+
 /** Take the run's bearing from where the camera is pointing, once. */
 export const alignRunWithCamera = () => { alignRequested = true }
 
@@ -218,6 +249,10 @@ export const GpsAnchor = ecs.registerComponent({
 
     const STILL_ENOUGH = (25 * Math.PI) / 180 // radians per second
 
+    // From the first usable heading, the estimate has a limited life.
+    if (firstHeadingAt === 0) firstHeadingAt = w.time.elapsed
+    if (!locked && LOCK_MS > 0 && w.time.elapsed - firstHeadingAt >= LOCK_MS) locked = true
+
     if (alignRequested) {
       /*
        * The camera is pointing along the run, so the run's bearing has to come
@@ -231,7 +266,7 @@ export const GpsAnchor = ecs.registerComponent({
     } else if (!data.hasYaw) {
       data.yawOffset = targetYaw
       data.hasYaw = true
-    } else if (!aligned && !SIMULATED && yawRate < STILL_ENOUGH) {
+    } else if (!aligned && !locked && !SIMULATED && yawRate < STILL_ENOUGH) {
       /*
        * Skipped entirely when simulating: targetYaw is β − ψ, and a stand-in
        * compass holds β constant, so every re-estimate is really just the

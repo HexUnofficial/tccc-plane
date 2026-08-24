@@ -131,6 +131,8 @@ field without republishing — same idea as the original.
 | `avg` | Fixes averaged together to suppress wander |
 | `smooth` | Seconds to ease to a corrected GPS position |
 | `smoothrot` | Seconds for the heading estimate to settle |
+| `lock` | Seconds of compass before the frame is locked and the tracker carries it; `0` never locks |
+| `align` | `1` shows the button that takes the run's bearing from where the phone points |
 | `north` | Degrees added to every compass reading, to dial out a device that is wrong |
 | `link` | `1` marks a link whose numbers should be honoured — see IGNORE_LINK_SETTINGS |
 | `size` | Overall assembly length in metres (aircraft, tow line and banner) |
