@@ -154,7 +154,7 @@ const WALK_MIN = num('walk', 12)
  * great deal better than showing them a flight path at right angles to the
  * river. `?walkfirst=0` restores the old behaviour of trusting the compass.
  */
-const WALK_FIRST = flag('walkfirst', true) && !SIMULATED
+const WALK_FIRST = flag('walkfirst', false) && !SIMULATED
 
 /** Metres walked so far, and how many are needed, for the message on screen. */
 export const getWalkProgress = () => ({
