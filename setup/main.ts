@@ -5,7 +5,9 @@ import './styles.css'
 
 import { createCircuit } from '../src/circuit'
 import { bearingBetween, compassPoint, destination, distanceBetween } from '../src/geo'
-import { FLIGHT, FLIGHT_HEADING, INSTALLATION } from '../src/location'
+import {
+  FLIGHT, FLIGHT_HEADING, IGNORE_LINK_SETTINGS, INSTALLATION, LOCKED,
+} from '../src/location'
 
 /**
  * Authoring tool for placing the flight circuit on a map.
@@ -298,6 +300,16 @@ function render() {
    * `path`. Add those by hand when you need them.
    */
   const query = new URLSearchParams({
+    /*
+     * Marks this as a link that means what it says.
+     *
+     * With IGNORE_LINK_SETTINGS set, the AR page throws away the numbers in
+     * any link that lacks this — which is how a printed QR carrying last
+     * season's flight path is retired without reprinting it. Every link this
+     * page emits carries it, so authoring still works against a build that is
+     * ignoring everyone else's.
+     */
+    link: '1',
     mode: 'fixed',
     lat: centre.lat.toFixed(7),
     lon: centre.lon.toFixed(7),
@@ -608,6 +620,23 @@ el('export-qr').addEventListener('click', async (event) => {
   }
   setTimeout(() => { button.textContent = original }, 1600)
 })
+
+/*
+ * Say plainly which regime the build is in, because both make a link behave in
+ * a way that looks like the page is broken.
+ */
+el('link-state').hidden = !(IGNORE_LINK_SETTINGS || LOCKED)
+if (LOCKED) {
+  el('link-state').innerHTML = '<b>LOCKED</b> is set in <code>src/location.ts</code>: the '
+    + 'deployed page ignores placement from <em>any</em> link, including these. Nothing '
+    + 'below will change what a phone sees until that is turned off and the values in '
+    + '<b>Ship it</b> are pasted in.'
+} else if (IGNORE_LINK_SETTINGS) {
+  el('link-state').innerHTML = '<b>IGNORE_LINK_SETTINGS</b> is set in '
+    + '<code>src/location.ts</code>: the deployed page throws away the numbers in any '
+    + 'link that does not carry <code>link=1</code>, so already-printed QR codes fly '
+    + 'whatever is in the code. Links from this page carry it and still work.'
+}
 
 render()
 

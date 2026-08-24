@@ -12,7 +12,7 @@
  * calibrated by waving a figure-eight.
  */
 
-import { num } from './config'
+import { num, placedNum } from './config'
 import { COMPASS_OFFSET } from './location'
 import { azimuthFrom } from './orientation'
 
@@ -163,7 +163,7 @@ export function simulateHeading(degrees: number) {
  * the panel's Heading with the bearing the map picker gives for the same run.
  * The difference is what goes here.
  */
-const NORTH_OFFSET = num('north', COMPASS_OFFSET)
+const NORTH_OFFSET = placedNum('north', COMPASS_OFFSET)
 
 /** Degrees clockwise from true north, or null before the first reading. */
 export function getHeading(): number | null {

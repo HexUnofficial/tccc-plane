@@ -10,6 +10,8 @@
  * `?size=` override and the HUD's on-screen-size maths agree with that bake
  * instead of each carrying their own copy of the numbers.
  */
+import { placedNum } from './config'
+
 const GLB = {
   size: [188.30322949797846, 89.36243069658263, 653.8289012796758],
   centre: [-0.0000028058725547452923, -5.2316101974445495, -165.87218571270114],
@@ -29,8 +31,10 @@ const LONGEST = Math.max(...GLB.size)
 export const DEFAULT_SIZE = 400
 
 export function requestedSize(): number {
-  const raw = Number.parseFloat(new URLSearchParams(location.search).get('size') ?? '')
-  return Number.isFinite(raw) && raw > 0 ? raw : DEFAULT_SIZE
+  // Through `placedNum`, so the size on a stale printed QR is discarded with
+  // the rest of its numbers. See IGNORE_LINK_SETTINGS in location.ts.
+  const size = placedNum('size', DEFAULT_SIZE)
+  return size > 0 ? size : DEFAULT_SIZE
 }
 
 export const scaleFor = (size: number) => size / LONGEST

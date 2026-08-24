@@ -1,6 +1,7 @@
 import * as ecs from '@8thwall/ecs'
 import { createFlightPath } from './flight-path'
 import { FLIGHT, FLIGHT_HEADING } from './location'
+import { num, placed, placedNum } from './config'
 
 /**
  * Drives the entity it's attached to along the flight circuit every frame.
@@ -16,12 +17,13 @@ import { FLIGHT, FLIGHT_HEADING } from './location'
  * tccc-ar-test's config.js, so it can be retuned in the field without
  * republishing from Studio.
  */
-const params = new URLSearchParams(location.search)
-
-const num = (key: string, fallback: number) => {
-  const value = Number.parseFloat(params.get(key) ?? '')
-  return Number.isFinite(value) ? value : fallback
-}
+/*
+ * The circuit's shape and size come through `placed`/`placedNum`, so a stale
+ * printed QR cannot fly the aircraft on last month's numbers — see
+ * IGNORE_LINK_SETTINGS in location.ts. `bank` and `rolltime` stay on plain
+ * `num`: they are handling qualities rather than placement, nothing on a
+ * printed code sets them, and they are useful to tune from the address bar.
+ */
 
 const degToRad = (d: number) => (d * Math.PI) / 180
 
@@ -62,16 +64,16 @@ export const FlightMotion = ecs.registerComponent({
   add: (w, { eid, schema, data }) => {
     data.startTime = w.time.elapsed
     paths.set(eid, createFlightPath({
-      shape: params.get('path') ?? schema.shape,
-      altitude: num('alt', schema.altitude),
-      speed: num('speed', schema.speed),
+      shape: placed('path') ?? schema.shape,
+      altitude: placedNum('alt', schema.altitude),
+      speed: placedNum('speed', schema.speed),
       maxBank: degToRad(num('bank', schema.maxBank)),
       rollTime: num('rolltime', schema.rollTime),
-      length: num('length', schema.length),
-      turnRadius: num('turn', schema.turnRadius),
-      radius: num('radius', schema.radius),
-      period: num('period', schema.period),
-      heading: num('heading', schema.heading),
+      length: placedNum('length', schema.length),
+      turnRadius: placedNum('turn', schema.turnRadius),
+      radius: placedNum('radius', schema.radius),
+      period: placedNum('period', schema.period),
+      heading: placedNum('heading', schema.heading),
     }))
   },
   tick: (w, { eid, data }) => {

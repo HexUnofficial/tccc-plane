@@ -105,6 +105,13 @@ in Studio's Inspector, which is the same thing).
 export const INSTALLATION = { lat: 51.5104797, lon: -0.0900796 }
 export const FLIGHT_HEADING = 114.5   // true bearing, down the river
 export const FLIGHT = { length: 2475, turnRadius: 55, altitude: 50, speed: 60, size: 400 }
+
+`IGNORE_LINK_SETTINGS` in the same file retires a printed QR. With it set,
+the numbers in any link that does not carry `link=1` are discarded and the
+values above are flown instead — so artwork already in circulation follows
+the code rather than the day it went to print. The map picker adds `link=1`
+to everything it emits, so authoring still works. `LOCKED` is the stricter
+one: it honours nothing from a link, the picker included.
 ```
 
 ## Tuning from the phone
@@ -125,6 +132,7 @@ field without republishing — same idea as the original.
 | `smooth` | Seconds to ease to a corrected GPS position |
 | `smoothrot` | Seconds for the heading estimate to settle |
 | `north` | Degrees added to every compass reading, to dial out a device that is wrong |
+| `link` | `1` marks a link whose numbers should be honoured — see IGNORE_LINK_SETTINGS |
 | `size` | Overall assembly length in metres (aircraft, tow line and banner) |
 | `mode` | `relative` drops the circuit near you instead of at the site |
 | `bearing`, `distance` | Relative mode: which way, and how far |

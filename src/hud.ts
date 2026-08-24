@@ -7,7 +7,7 @@ import { FlightMotion } from './flight-motion'
 import { halfExtentsFor, requestedSize } from './model'
 import { modelIsInScene } from './model-ready'
 import { DEFAULT_MODE, FLIGHT_HEADING, INSTALLATION, RELATIVE_PLACEMENT } from './location'
-import { num, params, placed, placedNum } from './config'
+import { linkIgnored, num, params, placed, placedNum } from './config'
 
 /**
  * How much interface to draw over the camera feed, matching tccc-ar-test:
@@ -41,7 +41,7 @@ export const formatDistance = (m: number) =>
  * centre made the arrow appear while the aircraft was still plainly in view.
  * Shared with model-scale.ts so `?size=` moves both the model and this box.
  */
-const RUN_HEADING = num('heading', FLIGHT_HEADING)
+const RUN_HEADING = placedNum('heading', FLIGHT_HEADING)
 
 const SIZE = requestedSize()
 const HALF = halfExtentsFor(SIZE)
@@ -374,6 +374,9 @@ ecs.registerBehavior((world) => {
    * same 114.5 as location.ts, so the two agree unless someone changes one.
    */
   setField('run', `${RUN_HEADING.toFixed(1)}° ${compassPoint(RUN_HEADING)}`)
+  // Which numbers are in force. A link whose settings were discarded looks
+  // identical to one that was obeyed, until you read this.
+  setField('link', linkIgnored() ? 'ignored — using shipped' : 'honoured')
   // The frame: how far the content is turned, and where SLAM thinks the camera
   // points. heading − camyaw should equal frame once it has settled; if it does
   // and the run is still across the river, the compass reading is the thing

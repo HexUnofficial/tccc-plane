@@ -43,6 +43,29 @@ export const DEFAULT_MODE = 'fixed'
 export const LOCKED = false
 
 /**
+ * ── THE PRINTED QR ────────────────────────────────────────────────────────
+ *
+ * Ignore the numbers baked into a link, and fly what is in this file and in
+ * .expanse.json instead.
+ *
+ * A QR that has been printed cannot be reissued. The one on the artwork
+ * carries the anchor, heading, length, turn, altitude, speed and size that
+ * were current the day it went to print, and every one of those is now stale —
+ * but it is on paper, in people's hands, and it is the link the public will
+ * scan. With this true, all of it is discarded on arrival and the experience
+ * is whatever the code says it is, which is the only copy that can still be
+ * changed.
+ *
+ * The map picker's own links carry `link=1` and are honoured as before, so the
+ * authoring tool keeps working while the printed code is overridden. That is
+ * also the limit of it: anyone who notices the parameter can re-enable the
+ * override on their own link. It exists to retire a stale print, not to defend
+ * against anyone, and LOCKED above is the one that admits no exceptions —
+ * including from the picker.
+ */
+export const IGNORE_LINK_SETTINGS = true
+
+/**
  * Which way the aircraft beats back and forth.
  *
  * A true compass bearing, held regardless of where you stand. The Thames runs

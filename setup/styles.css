@@ -65,3 +65,5 @@ code { font-family: ui-monospace, Consolas, monospace; font-size: .95em; }
 #too-big { color: #f85149; }
 
 #shape { color: #f0883e; }
+
+#link-state { color: #f0883e; border-left: 2px solid #f0883e; padding-left: .5rem; }
