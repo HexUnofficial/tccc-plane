@@ -1,7 +1,7 @@
 import * as ecs from '@8thwall/ecs'
 import { bearingBetween, compassPoint, destination, distanceBetween } from './geo'
 import { getError, getFix } from './gps'
-import { getHeading } from './compass'
+import { getCompassState, getHeading } from './compass'
 import { getCameraYaw, getFrameYaw } from './gps-anchor'
 import { FlightMotion } from './flight-motion'
 import { halfExtentsFor, requestedSize } from './model'
@@ -191,7 +191,11 @@ ecs.registerBehavior((world) => {
     text = 'Waiting for GPS…'
     tone = 'warn'
   } else if (heading === null) {
-    text = 'Waiting for the compass — wave the phone in a figure-eight.'
+    // A phone held low reports a heading that is steady and meaningless, so
+    // it is refused — and the only thing that fixes it is lifting the phone.
+    text = getCompassState() === 'flat'
+      ? 'Hold the phone up, camera towards the horizon.'
+      : 'Waiting for the compass — wave the phone in a figure-eight.'
     tone = 'warn'
   } else if (!modelInScene) {
     // Ten megabytes of aeroplane over mobile data outlasts the gate's own

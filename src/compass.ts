@@ -14,7 +14,7 @@
 
 import { num, placedNum } from './config'
 import { COMPASS_OFFSET } from './location'
-import { azimuthFrom } from './orientation'
+import { BEARING_LEVEL_FLOOR, cameraBearing } from './orientation'
 
 type CompassEvent = DeviceOrientationEvent & { webkitCompassHeading?: number }
 
@@ -44,6 +44,8 @@ const STEADY_TOLERANCE = num('steadytol', 10)
 const STEADY_LIMIT_MS = num('steadymax', 6) * 1000
 
 let steady = false
+/** True when the last reading was too close to vertical to be a bearing. */
+let noHorizon = false
 let firstReadingAt = 0
 let steadyFrom = 0
 let steadyAround: number | null = null
@@ -77,17 +79,37 @@ const screenAngle = () => screen.orientation?.angle ?? 0
  * tilted up at the sky — are handled by the same arithmetic that worked at
  * this site before.
  */
+/**
+ * Take the bearing, unless the pose cannot give one.
+ *
+ * A camera pointing at the ground has no bearing, and the value that comes
+ * back from a degenerate pose is not merely inaccurate — it is constant, so it
+ * sails through the steadiness test below while meaning nothing. Rejecting it
+ * leaves `heading` at whatever was last measured properly, or null if there
+ * has been nothing yet, which the rest of the app already treats as "not
+ * ready" rather than as north.
+ */
+function publish(alpha: number, beta: number, gamma: number) {
+  const { bearing, level } = cameraBearing(alpha, beta, gamma)
+  noHorizon = level < BEARING_LEVEL_FLOOR
+  if (noHorizon) return
+  heading = bearing
+  noteReading(bearing)
+}
+
 function onOrientation(event: CompassEvent) {
   const { beta, gamma } = event
   const tilted = typeof beta === 'number' && typeof gamma === 'number'
 
   if (typeof event.webkitCompassHeading === 'number' && !Number.isNaN(event.webkitCompassHeading)) {
     const compass = event.webkitCompassHeading
-    heading = tilted
-      ? azimuthFrom(360 - compass, beta as number, gamma as number)
-      // No tilt to work with: assume upright and portrait, and lean on the
-      // screen angle, which is right unless the page is orientation-locked.
-      : (compass + screenAngle()) % 360
+    if (tilted) {
+      publish(360 - compass, beta as number, gamma as number)
+      return
+    }
+    // No tilt to work with: assume upright and portrait, and lean on the
+    // screen angle, which is right unless the page is orientation-locked.
+    heading = (compass + screenAngle()) % 360
     noteReading(heading)
     return
   }
@@ -95,9 +117,11 @@ function onOrientation(event: CompassEvent) {
   // `absolute` matters — a relative-only event is referenced to wherever the
   // device happened to be, which is worse than useless for finding north.
   if (event.absolute && typeof event.alpha === 'number') {
-    heading = tilted
-      ? azimuthFrom(event.alpha, beta as number, gamma as number)
-      : (360 - event.alpha + screenAngle()) % 360
+    if (tilted) {
+      publish(event.alpha, beta as number, gamma as number)
+      return
+    }
+    heading = (360 - event.alpha + screenAngle()) % 360
     noteReading(heading)
   }
 }
@@ -164,6 +188,18 @@ export function simulateHeading(degrees: number) {
  * The difference is what goes here.
  */
 const NORTH_OFFSET = placedNum('north', COMPASS_OFFSET)
+
+/**
+ * Why there is no heading yet, for a message that can be acted on.
+ *
+ *   'flat'      readings are arriving but the camera is pointing at the floor
+ *   'settling'  readings are arriving and being checked for agreement
+ *   'none'      nothing has arrived at all: no permission, or no magnetometer
+ */
+export function getCompassState(): 'flat' | 'settling' | 'none' {
+  if (noHorizon) return 'flat'
+  return heading === null ? 'none' : 'settling'
+}
 
 /** Degrees clockwise from true north, or null before the first reading. */
 export function getHeading(): number | null {

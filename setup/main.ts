@@ -133,6 +133,9 @@ const runCentre = () => destination(state.a, runHeading(), runLength() / 2)
 /** Same config as the emitted URL, but with the sensors simulated. */
 let previewUrl = ''
 
+/** The bare address, for artwork that has to outlive these settings. */
+let printUrl = ''
+
 // ── Map ──────────────────────────────────────────────────────────────────────
 
 const map = L.map('map', { zoomControl: true }).setView([startCentre.lat, startCentre.lon], 16)
@@ -357,6 +360,22 @@ function render() {
   preview.set('viewfrom', ((heading + 90) % 360).toFixed(0))
   previewUrl = `${base}?${preview}`
   el<HTMLAnchorElement>('preview').href = previewUrl
+
+  /*
+   * What goes on paper: the address and nothing else.
+   *
+   * Everything this page emits carries `link=1`, which is what makes it
+   * authoritative — and that is exactly wrong for print. A code with numbers
+   * in it is a photograph of one afternoon's settings, and the moment the
+   * flight path changes the artwork is lying, with no way to reissue it. That
+   * is the situation this whole mechanism exists to dig out of.
+   *
+   * A bare link cannot go stale: it says "the experience", and the experience
+   * is whatever is deployed. The numbers still have to reach the deployment,
+   * which is what the two Ship it boxes are for.
+   */
+  printUrl = base
+  input('print-url').value = printUrl
 
   /*
    * A QR pointing at localhost is useless: scanned on a phone it resolves to
@@ -604,14 +623,13 @@ copy(el('copy-scene'), 'scene')
  * a layout — without it, artwork butting up against the pattern stops it
  * reading.
  */
-el('export-qr').addEventListener('click', async (event) => {
-  const button = event.currentTarget as HTMLButtonElement
+async function exportQr(button: HTMLButtonElement, url: string, name: string) {
   const original = button.textContent
   try {
     const canvas = document.createElement('canvas')
-    await QRCode.toCanvas(canvas, input('url').value, { width: 2048, margin: 2 })
+    await QRCode.toCanvas(canvas, url, { width: 2048, margin: 2 })
     const link = document.createElement('a')
-    link.download = 'tccc-ar-qr.png'
+    link.download = name
     link.href = canvas.toDataURL('image/png')
     link.click()
     button.textContent = 'Downloaded'
@@ -619,6 +637,16 @@ el('export-qr').addEventListener('click', async (event) => {
     button.textContent = `Failed: ${(error as Error).message}`
   }
   setTimeout(() => { button.textContent = original }, 1600)
+}
+
+el('export-qr').addEventListener('click', (event) => {
+  void exportQr(event.currentTarget as HTMLButtonElement, printUrl, 'tccc-ar-qr.png')
+})
+
+el('export-qr-numbers').addEventListener('click', (event) => {
+  void exportQr(
+    event.currentTarget as HTMLButtonElement, input('url').value, 'tccc-ar-qr-with-numbers.png',
+  )
 })
 
 /*
@@ -650,4 +678,5 @@ render()
   get centre() { return runCentre() },
   get outline() { return circuitOutline() },
   get previewUrl() { return previewUrl },
+  get printUrl() { return printUrl },
 }

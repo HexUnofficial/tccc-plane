@@ -135,11 +135,21 @@
            <b>Network:</b> address <code>npm run serve</code> printed, then rescan.</p>
       </div>
       <div class="row">
-        <button id="export-qr" type="button">Export big QR (PNG)</button>
+        <button id="export-qr" class="primary" type="button">Export QR for print</button>
+        <button id="export-qr-numbers" type="button">…with these numbers</button>
       </div>
+      <input id="print-url" type="text" readonly>
       <p class="muted small">
-        The one on screen is only big enough to scan off the monitor. This
-        downloads a roughly 2000px copy of the same link, for print or a slide.
+        <b>For print</b> encodes the address above and nothing else, so it can
+        never go stale: it means "the experience", and the experience is
+        whatever is deployed. Get these settings into the deployment with the
+        two <b>Ship it</b> boxes and the artwork follows them for good.
+      </p>
+      <p class="muted small">
+        <b>…with these numbers</b> bakes the current sliders into the code
+        itself. Only for a run of artwork that must keep flying this exact path
+        whatever else changes — it is a photograph of this afternoon, and paper
+        cannot be reissued.
       </p>
     </section>
 

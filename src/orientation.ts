@@ -29,12 +29,31 @@
 const RAD = Math.PI / 180
 
 /**
+ * ── WHY THIS RETURNS TWO NUMBERS ──────────────────────────────────────────
+ *
+ * A camera pointing at the ground has no bearing. The forward vector is
+ * vertical, its horizontal part is zero, and the atan2 of two zeros is not a
+ * direction — it is whatever the floating point happens to land on. Held flat
+ * this function returns the same answer whichever way the phone is turned,
+ * and, being constant, it looks *more* settled than a real reading rather than
+ * less. Publishing it put the whole circuit at a right angle to the river, in
+ * a different direction each session, depending only on how the phone was
+ * being held at the moment the compass was believed.
+ *
+ * So the caller is told how much horizontal there was to measure. `level` is
+ * the length of the forward vector's horizontal part: 1 with the camera at the
+ * horizon, 0 with it straight up or down, and cos(elevation) in between. Below
+ * a threshold the bearing means nothing and must not be used.
+ *
  * @param alpha rotation about the vertical, degrees, anticlockwise from north
  * @param beta  front-to-back tilt, degrees; 90 is upright
  * @param gamma left-to-right roll, degrees; ±90 is on its side
- * @returns compass bearing of the rear camera, degrees clockwise from north
+ * @returns the rear camera's bearing clockwise from north, and how much of the
+ *   camera's direction was horizontal enough to take it from
  */
-export function azimuthFrom(alpha: number, beta: number, gamma: number): number {
+export function cameraBearing(
+  alpha: number, beta: number, gamma: number,
+): { bearing: number; level: number } {
   const sinA = Math.sin(alpha * RAD)
   const cosA = Math.cos(alpha * RAD)
   const sinB = Math.sin(beta * RAD)
@@ -48,5 +67,16 @@ export function azimuthFrom(alpha: number, beta: number, gamma: number): number 
 
   // North is −Z and east is +X, the same convention as circuit.ts and
   // gps-anchor.ts, so the bearing is atan2(east, north).
-  return ((Math.atan2(x, -z) / RAD) + 360) % 360
+  return {
+    bearing: ((Math.atan2(x, -z) / RAD) + 360) % 360,
+    level: Math.hypot(x, z),
+  }
 }
+
+/**
+ * Below this there is not enough horizon in the camera's direction to call it
+ * a bearing. cos(75°) — so anything from level with the ground to three
+ * quarters of the way up the sky still counts, which covers watching an
+ * aircraft pass overhead, and a phone lying on a table does not.
+ */
+export const BEARING_LEVEL_FLOOR = 0.26
