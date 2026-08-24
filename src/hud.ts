@@ -82,6 +82,7 @@ let arrowAngle = 0
 let arrowSnap = true
 let lastText = ''
 let lastTone = ''
+let lastBlocking = false
 const lastField: Record<string, string> = {}
 
 function setField(id: string, value: string) {
@@ -91,14 +92,22 @@ function setField(id: string, value: string) {
   if (node) node.textContent = value
 }
 
-function setStatus(text: string, tone: string) {
-  if (text === lastText && tone === lastTone) return
+/**
+ * `blocking` is the difference between a note and a screen: it means there is
+ * nothing to look at yet and nothing to do but the thing the message says, so
+ * it takes the middle of the display in the brand red rather than sitting in a
+ * pill at the top.
+ */
+function setStatus(text: string, tone: string, blocking: boolean) {
+  if (text === lastText && tone === lastTone && blocking === lastBlocking) return
   lastText = text
   lastTone = tone
+  lastBlocking = blocking
   const node = el('status')
   if (!node) return
   node.textContent = text
   node.dataset.tone = tone
+  node.dataset.blocking = String(blocking && Boolean(text))
   node.hidden = !text
 }
 
@@ -167,6 +176,12 @@ ecs.registerBehavior((world) => {
 
   let text = ''
   let tone = 'neutral'
+  /*
+   * Everything above `tooFar` stops the experience happening at all; being in
+   * the wrong place does not — there is still an aircraft, somewhere over
+   * there, and the arrow will point at it.
+   */
+  let blocking = true
   const gpsError = getError()
   if (gpsError) {
     text = gpsError
@@ -185,10 +200,13 @@ ecs.registerBehavior((world) => {
   } else if (tooFar) {
     text = `${formatDistance(distance!)} from the installation — you are not at the site.`
     tone = 'warn'
+    blocking = false
+  } else {
+    blocking = false
   }
 
   const worthInterrupting = tone === 'warn' || tone === 'error'
-  setStatus(ui === 'debug' || (ui === 'minimal' && worthInterrupting) ? text : '', tone)
+  setStatus(ui === 'debug' || (ui === 'minimal' && worthInterrupting) ? text : '', tone, blocking)
 
   // --- Where the aircraft is, and how big it looks from here ---------------
   const camera = world.three.activeCamera as unknown as Cam | undefined

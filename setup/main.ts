@@ -75,6 +75,17 @@ const state = {
    * standoff the simulated preview is watched from, so the two agree.
    */
   viewer: num('viewer', 200),
+  /**
+   * Degrees added to the phone's compass, from `?north=`.
+   *
+   * Not a property of the site at all — it belongs to the device, and it is
+   * here because this is the page that emits the link. A magnetometer that
+   * reads a quadrant out rotates the entire content frame, which on the ground
+   * looks exactly like the run having been drawn across the river instead of
+   * along it. Once the number is found on site it has to survive into the QR,
+   * or it has to be retyped into the address bar every time.
+   */
+  north: num('north', 0),
 }
 
 /**
@@ -208,6 +219,7 @@ function render() {
   el('v-speed').textContent = `${state.speed} m/s`
   el('v-size').textContent = `${state.size} m`
   el('v-viewer').textContent = `${state.viewer} m`
+  el('v-north').textContent = state.north === 0 ? 'none' : `${state.north > 0 ? '+' : ''}${state.north}°`
   // The sliders follow state, not only the other way round: "Make it
   // watchable" sets four of them at once, and a knob still showing the old
   // number would put the page and the emitted link out of step.
@@ -296,6 +308,10 @@ function render() {
     speed: String(state.speed),
     size: String(state.size),
   })
+
+  // Only when it is doing something: a `north=0` in every link invites the
+  // belief that the compass needs correcting as a matter of course.
+  if (state.north !== 0) query.set('north', String(state.north))
 
   /*
    * Resolve against the containing directory rather than string-stripping
@@ -412,6 +428,7 @@ input('length').addEventListener('input', (event) => {
 })
 
 const knobs = [
+  ['north', 'north'],
   ['turn', 'turnRadius'],
   ['alt', 'altitude'],
   ['speed', 'speed'],

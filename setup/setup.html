@@ -59,6 +59,10 @@
         <input id="size" type="range" min="15" max="600" step="5" value="400"></label>
       <label><span>Watched from <b id="v-viewer"></b></span>
         <input id="viewer" type="range" min="30" max="2000" step="10" value="200"></label>
+      <!-- Belongs to the phone, not to the site — but this is the page that
+           emits the link, so this is where it has to be set to survive. -->
+      <label><span>Compass offset <b id="v-north"></b></span>
+        <input id="north" type="range" min="-180" max="180" step="5" value="0"></label>
     </div>
 
     <div class="row">
@@ -77,6 +81,13 @@
       <b>Ship it</b> boxes.
     </p>
 
+    <p class="muted small">
+      <b>Compass offset</b> only matters if the aircraft flies at an angle to
+      the run you drew. Add <code>&amp;north=90</code> to the link on site and
+      watch: if the path swings onto the river, the phone's magnetometer is
+      that far out, and this slider carries the correction into the QR. Try
+      &minus;90 as well — the sign depends on the device.
+    </p>
     <p class="muted small" id="apparent"></p>
     <p class="muted small" id="pass"></p>
     <p class="muted small" id="shape" hidden></p>

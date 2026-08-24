@@ -97,6 +97,31 @@
     #status[data-tone="warn"]  { border-color: var(--warn); }
     #status[data-tone="error"] { border-color: var(--error); }
 
+    /*
+     * While something is actually stopping the experience — no fix, no
+     * compass, no aircraft yet — the message *is* the screen: centred, in the
+     * brand red, sized to be read at arm's length. A pill in the corner is
+     * right for "you are 3 km from the site", which you can act on whenever;
+     * it is wrong for "wave the phone in a figure-eight", which is the only
+     * thing there is to do. Placed after the tone rules so it wins the border.
+     */
+    #status[data-blocking="true"] {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      translate: -50% -50%;
+      max-width: 17rem;
+      padding: 1rem 1.15rem;
+      border-radius: 1rem;
+      font-size: 0.95rem;
+      line-height: 1.4;
+      font-weight: 500;
+      background: #F40000;
+      border-color: rgb(255 255 255 / 0.4);
+      box-shadow: 0 12px 34px rgb(0 0 0 / 0.4);
+      backdrop-filter: none;
+    }
+
     #arrow {
       position: absolute;
       top: 50%;
