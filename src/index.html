@@ -205,14 +205,14 @@
     }
     .gate-by img {
       display: block;
-      height: 0.85rem;
+      /* Slightly taller than the type beside it: the mark is a wordmark whose
+         letters sit inside a grid, so matching cap heights makes it read
+         smaller than the word it follows. */
+      height: 1.05rem;
       width: auto;
-      /* The mark is drawn in black, and this sits on the brand red. Forcing it
-         to pure white matches the rest of the gate and keeps one asset good on
-         any background; drop this line if a white version is supplied. It only
-         works on artwork with a transparent background — a white rectangle
-         behind the letters would come through as a white block. */
-      filter: brightness(0) invert(1);
+      /* No colour filter. The artwork is white letterforms with a fine dark
+         outline on a transparent ground, which is already the gate's palette —
+         forcing it white would erase the outline that gives it its shape. */
     }
     .gate-card p { margin: 0 0 1.25rem; font-size: 0.9rem; line-height: 1.5; opacity: 0.85; }
 

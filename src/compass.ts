@@ -19,6 +19,48 @@ type CompassEvent = DeviceOrientationEvent & { webkitCompassHeading?: number }
 let heading: number | null = null
 let started = false
 
+/*
+ * ── SETTLING ──────────────────────────────────────────────────────────────
+ *
+ * The first readings out of a magnetometer are not to be trusted. iOS reports
+ * a heading before the sensor has converged, and an uncalibrated Android can
+ * be a quadrant out for a second or two — and gps-anchor latches its yaw from
+ * the very first reading it is given, because that offset is supposed to be a
+ * constant. Latch a bad one and the whole content frame starts wrong and then
+ * creeps to correct over the smoothing time, which is an arrow that points
+ * somewhere unhelpful at exactly the moment someone is deciding whether this
+ * works at all.
+ *
+ * So a reading is not published until successive ones have agreed for a
+ * while. Until then getHeading() answers null, which everything downstream
+ * already handles: the anchor hides, the arrow stays down, and the HUD says
+ * it is waiting for the compass.
+ */
+const STEADY_MS = num('steady', 1) * 1000
+const STEADY_TOLERANCE = num('steadytol', 10)
+/** But never wait forever: a noisy compass is still better than no start. */
+const STEADY_LIMIT_MS = num('steadymax', 6) * 1000
+
+let steady = false
+let firstReadingAt = 0
+let steadyFrom = 0
+let steadyAround: number | null = null
+
+/** Signed difference between two bearings, in [-180, 180). */
+const arc = (degrees: number) => (((degrees + 180) % 360) + 360) % 360 - 180
+
+function noteReading(value: number) {
+  if (steady) return
+  const now = performance.now()
+  if (firstReadingAt === 0) firstReadingAt = now
+  if (steadyAround === null || Math.abs(arc(value - steadyAround)) > STEADY_TOLERANCE) {
+    steadyAround = value
+    steadyFrom = now
+    return
+  }
+  steady = now - steadyFrom >= STEADY_MS || now - firstReadingAt >= STEADY_LIMIT_MS
+}
+
 /** Degrees the page is rotated relative to the device's natural orientation. */
 const screenAngle = () => screen.orientation?.angle ?? 0
 
@@ -41,6 +83,7 @@ function onOrientation(event: CompassEvent) {
    */
   if (typeof event.webkitCompassHeading === 'number' && !Number.isNaN(event.webkitCompassHeading)) {
     heading = (event.webkitCompassHeading + screenAngle()) % 360
+    noteReading(heading)
     return
   }
 
@@ -50,6 +93,7 @@ function onOrientation(event: CompassEvent) {
   // device happened to be, which is worse than useless for finding north.
   if (event.absolute && typeof event.alpha === 'number') {
     heading = (360 - event.alpha + screenAngle()) % 360
+    noteReading(heading)
   }
 }
 
@@ -96,6 +140,8 @@ export function startCompass() {
 export function simulateHeading(degrees: number) {
   heading = ((degrees % 360) + 360) % 360
   started = true
+  // A stand-in never wanders, so there is nothing to wait for.
+  steady = true
 }
 
 /**
@@ -116,6 +162,6 @@ const NORTH_OFFSET = num('north', 0)
 
 /** Degrees clockwise from true north, or null before the first reading. */
 export function getHeading(): number | null {
-  if (heading === null) return null
+  if (heading === null || !steady) return null
   return (((heading + NORTH_OFFSET) % 360) + 360) % 360
 }

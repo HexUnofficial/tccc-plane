@@ -62,6 +62,7 @@ const CREDIT_SOURCES = [
   './assets/brand/hex.svg',
   './assets/brand/hex.png',
   './assets/brand/hex.webp',
+  './assets/brand/hex.gif',
 ]
 
 /**
